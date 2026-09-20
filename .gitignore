@@ -47,3 +47,16 @@ po/*~
 
 # RStudio Connect folder
 rsconnect/
+
+# ignore data, outputs and context folders
+data-processed/*
+data-raw/*
+outputs/*
+context/*
+
+# rendered report outputs (docx/xlsx/pptx/pdf/csv)
+*.docx
+*.xlsx
+*.pptx
+*.pdf
+*.csv
