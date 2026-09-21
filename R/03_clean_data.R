@@ -1,8 +1,7 @@
 # Title and description --------------------------------------------
 
-# Cleaning the typed leprosy linelist and deriving analysis columns.
-# Every rule here is documented, with affected Excel rows, in
-# outputs/data_cleaning/<raw filename> - notes.md (rule numbers R1-R5, flags F1-F2).
+# Cleaning the typed leprosy linelist and deriving analysis columns
+# Ruled documented in outputs/data_cleaning/<raw filename> - notes.md
 # Input:  data-processed/linelist_typed.qs2
 # Output: data-processed/linelist_clean.qs2
 
@@ -31,8 +30,7 @@ linelist_clean <- linelist %>%
     # R1: standardise spelling of disease classification ("PB child" -> "PB Child")
     pat_class = str_replace(pat_class, "child$", "Child"),
 
-    # R2: age group from the disease classification (validated against age in
-    # 02_data_summary.R). Kept for the 4 cases with missing age; pat_age stays NA.
+    # R2: age group from the disease classification
     age_group = case_when(
       str_detect(pat_class, "Child") ~ "Child",
       str_detect(pat_class, "Adult") ~ "Adult"
@@ -82,7 +80,7 @@ linelist_clean <- linelist %>%
 
     # R4: Betio (including the mixed "Betio/..." labels) versus rest of South Tarawa
     area_group = if_else(
-      str_starts(pat_area, "Betio"),
+      str_starts(pat_village_clean, "Betio"),
       "Betio",
       "Rest of South Tarawa"
     ) %>%

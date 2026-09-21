@@ -20,36 +20,9 @@ library(officer)
 
 # Parameters ----------------------------------------
 
-# Categorical colours: fixed order, from the mockup palette with the aqua and
-# pink deepened so they pass the colour-blind separation and 3:1 contrast
-# checks (validate_palette, light surface). Pathway palette is checked on
-# adjacent stacked segments (white gaps separate them); yellow is 2.99:1.
-# Every chart also has a legend, and line charts add line type and point shape.
-pal_pathway <- c(
-  "Self-presentation" = "#2a78d6",
-  "Clinical referral" = "#eb6834",
-  "Household contact" = "#199e70",
-  "House-to-house" = "#c98500",
-  "Population screening" = "#d55181",
-  "Skin camp" = "#008300",
-  "School screening" = "#4a3aa7"
-)
-
-# Time series styles: colour, line type and point shape for every series name
-# (blue, orange, aqua, violet pass all-pairs colour-blind and contrast checks)
-ts_style <- tribble(
-  ~series, ~colour, ~linetype, ~shape,
-  "South Tarawa (all)", "#2a78d6", "solid", 16,
-  "Betio", "#eb6834", "solid", 17,
-  "Rest of South Tarawa", "#199e70", "solid", 15,
-  "Betio, active", "#eb6834", "dashed", 17,
-  "Betio, passive", "#eb6834", "dotted", 15,
-  "Rest of South Tarawa, active", "#199e70", "dashed", 17,
-  "Rest of South Tarawa, passive", "#199e70", "dotted", 15,
-  "House-to-house", "#eb6834", "dashed", 17,
-  "Other active", "#199e70", "dotdash", 15,
-  "Passive", "#4a3aa7", "dotted", 18
-)
+# Colours: every categorical colour comes from the ColorBrewer "Dark2" palette
+# (scale_colour_brewer / scale_fill_brewer), assigned in factor-level order.
+# Neutrals use R's built-in grey names.
 
 # Public health activity start years (manuscript Table A) for annotated plots
 ts_markers <- tribble(
@@ -66,11 +39,11 @@ theme_lep_plot <- theme_minimal(base_size = 11) +
     plot.background = element_rect(fill = "white", colour = NA),
     panel.grid.minor = element_blank(),
     panel.grid.major.x = element_blank(),
-    panel.grid.major.y = element_line(colour = "#e1e0d9", linewidth = 0.3),
-    axis.text = element_text(colour = "#52514e"),
-    axis.title = element_text(colour = "#0b0b0b"),
+    panel.grid.major.y = element_line(colour = "grey88", linewidth = 0.3),
+    axis.text = element_text(colour = "grey30"),
+    axis.title = element_text(colour = "black"),
     plot.title = element_text(face = "bold", size = 12),
-    plot.caption = element_text(colour = "#52514e", hjust = 0),
+    plot.caption = element_text(colour = "grey30", hjust = 0),
     legend.position = "bottom",
     legend.title = element_blank()
   )
@@ -79,7 +52,7 @@ theme_lep_plot <- theme_minimal(base_size = 11) +
 theme_lep_table <- function(ft, ...) {
   ft %>%
     fontsize(size = 9, part = "all") %>%
-    bg(bg = "#d9d9d9", part = "header") %>%
+    bg(bg = "grey85", part = "header") %>%
     bg(bg = "white", part = "body") %>%
     bold(part = "header") %>%
     align(align = "center", part = "all") %>%
@@ -546,9 +519,9 @@ out_plot_rates <- function(linelist, census_pop) {
 
   ggplot(rates, aes(x = area, y = rate, fill = area)) +
     geom_col(width = 0.5) +
-    geom_errorbar(aes(ymin = ci_low, ymax = ci_high), width = 0.15, colour = "#0b0b0b") +
+    geom_errorbar(aes(ymin = ci_low, ymax = ci_high), width = 0.15, colour = "black") +
     geom_text(aes(y = 0, label = sprintf("%.1f", rate)), vjust = -1, colour = "white", size = 5) +
-    scale_fill_manual(values = setNames(ts_style$colour, ts_style$series), guide = "none") +
+    scale_fill_brewer(palette = "Dark2", guide = "none") +
     scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, 0.08))) +
     labs(
       title = "Annualised leprosy case notification rate, 2018-2025",
@@ -579,7 +552,7 @@ out_plot_rate_year <- function(linelist, census_pop, return_data = FALSE) {
     left_join(cases, by = c("area", "year")) %>%
     mutate(
       rate = 10000 * cases / population,
-      area = factor(area, levels = ts_style$series)
+      area = factor(area, levels = c("Betio", "Rest of South Tarawa", "South Tarawa (all)"))
     ) %>%
     arrange(area, year)
 
@@ -587,14 +560,10 @@ out_plot_rate_year <- function(linelist, census_pop, return_data = FALSE) {
     return(rates)
   }
 
-  style <- ts_style %>% filter(series %in% rates$area)
-
   ggplot(rates, aes(x = year, y = rate, colour = area, linetype = area, shape = area)) +
     geom_line(linewidth = 0.7) +
     geom_point(size = 2.4) +
-    scale_colour_manual(values = setNames(style$colour, style$series)) +
-    scale_linetype_manual(values = setNames(style$linetype, style$series)) +
-    scale_shape_manual(values = setNames(style$shape, style$series)) +
+    scale_colour_brewer(palette = "Dark2") +
     scale_x_continuous(breaks = 2018:2025) +
     scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, 0.05))) +
     labs(
@@ -629,14 +598,11 @@ out_plot_rate_mode_year <- function(linelist, census_pop, return_data = FALSE) {
     return(rates)
   }
 
-  style <- ts_style %>% filter(series %in% rates$area)
-
   ggplot(rates, aes(x = year, y = rate, colour = area, shape = area)) +
     geom_line(linewidth = 0.7) +
     geom_point(size = 2.4) +
     facet_wrap(~mode, scales = "free_y") +
-    scale_colour_manual(values = setNames(style$colour, style$series)) +
-    scale_shape_manual(values = setNames(style$shape, style$series)) +
+    scale_colour_brewer(palette = "Dark2") +
     scale_x_continuous(breaks = seq(2018, 2025, 1)) +
     scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, 0.05))) +
     labs(
@@ -697,17 +663,11 @@ out_plot_mode_year <- function(linelist, area = NULL, return_data = FALSE) {
       data = totals,
       aes(x = factor(year), y = total, label = total),
       vjust = -0.5,
-      colour = "#0b0b0b",
+      colour = "black",
       size = 3.6,
       inherit.aes = FALSE
     ) +
-    scale_fill_manual(
-      values = c(
-        "House-to-house" = "#eb6834",
-        "All other active" = "#199e70",
-        "All passive" = "#4a3aa7"
-      )
-    ) +
+    scale_fill_brewer(palette = "Dark2") +
     scale_y_continuous(expand = expansion(mult = c(0, 0.08))) +
     labs(
       title = paste0("Leprosy notifications by mode of detection, ", area_label, " 2018-2025"),
@@ -778,14 +738,14 @@ out_plot_rate_mode_stacked <- function(linelist, census_pop, return_data = FALSE
       data = totals,
       aes(x = factor(year), y = total, label = sprintf("%.1f", total)),
       vjust = -0.5,
-      colour = "#0b0b0b",
+      colour = "black",
       size = 3,
       inherit.aes = FALSE
     ) +
     geom_vline(
       data = markers,
       aes(xintercept = x),
-      colour = "#898781",
+      colour = "grey55",
       linetype = "dotted",
       inherit.aes = FALSE
     ) +
@@ -795,17 +755,11 @@ out_plot_rate_mode_stacked <- function(linelist, census_pop, return_data = FALSE
       hjust = -0.08,
       vjust = 1.6,
       size = 3,
-      colour = "#52514e",
+      colour = "grey30",
       inherit.aes = FALSE
     ) +
     facet_wrap(~area) +
-    scale_fill_manual(
-      values = c(
-        "House-to-house" = "#eb6834",
-        "All other active" = "#199e70",
-        "All passive" = "#4a3aa7"
-      )
-    ) +
+    scale_fill_brewer(palette = "Dark2") +
     scale_y_continuous(expand = expansion(mult = c(0, 0.08))) +
     labs(
       title = "Leprosy case notification rate by mode of detection, 2018-2025",
@@ -820,7 +774,7 @@ out_plot_rate_mode_stacked <- function(linelist, census_pop, return_data = FALSE
     theme_lep_plot +
     theme(
       strip.text = element_text(face = "bold", size = 12, hjust = 0, margin = margin(6, 6, 6, 6)),
-      strip.background = element_rect(fill = "#f0efec", colour = NA),
+      strip.background = element_rect(fill = "grey94", colour = NA),
       panel.spacing.x = unit(4, "lines"),
       axis.text.x = element_text(angle = 45, hjust = 1)
     )
@@ -919,10 +873,9 @@ out_plot_casemix_time <- function(linelist, census_pop, return_data = FALSE) {
     year = 2018,
     prop = 80
   )
-  style <- ts_style %>% filter(series %in% area_levels)
 
   ggplot(annual, aes(x = year, y = prop, colour = area, shape = area)) +
-    geom_vline(xintercept = 2022.5, colour = "#898781", linetype = "dotted") +
+    geom_vline(xintercept = 2022.5, colour = "grey55", linetype = "dotted") +
     geom_blank(data = common_range, aes(x = year, y = prop), inherit.aes = FALSE) +
     geom_segment(
       data = periods,
@@ -934,8 +887,7 @@ out_plot_casemix_time <- function(linelist, census_pop, return_data = FALSE) {
     geom_line(linewidth = 0.4, alpha = 0.6) +
     geom_point(size = 2.2) +
     facet_wrap(~indicator, ncol = 1, scales = "free_y") +
-    scale_colour_manual(values = setNames(style$colour, style$series)) +
-    scale_shape_manual(values = setNames(style$shape, style$series)) +
+    scale_colour_brewer(palette = "Dark2") +
     scale_x_continuous(breaks = 2018:2025) +
     scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, 0.05))) +
     labs(
@@ -954,7 +906,7 @@ out_plot_casemix_time <- function(linelist, census_pop, return_data = FALSE) {
     theme_lep_plot +
     theme(
       strip.text = element_text(face = "bold", size = 10, hjust = 0),
-      strip.background = element_rect(fill = "#f0efec", colour = NA)
+      strip.background = element_rect(fill = "grey94", colour = NA)
     )
 }
 
@@ -1039,19 +991,19 @@ out_plot_pyramid <- function(linelist, pop_age, census_pop, area = c("Betio", "S
     )
 
   ggplot(df, aes(x = age_group, colour = sex, fill = sex)) +
-    geom_col(aes(y = cases_signed), width = 0.85, colour = "white", linewidth = 0.4) +
+    geom_col(aes(y = cases_signed), width = 0.85, colour = "white", linewidth = 0.4, alpha = 0.35) +
     geom_text(
       data = df %>% filter(cases > 0),
       aes(x = age_group, y = label_pos, label = cases, hjust = if_else(sex == "Male", 1, 0)),
       size = 3,
-      colour = "#0b0b0b",
+      colour = "black",
       inherit.aes = FALSE
     ) +
     geom_line(aes(y = rate_signed, group = sex), linetype = "dotted", linewidth = 0.9) +
     geom_point(aes(y = rate_signed), shape = 18, size = 3.6) +
     coord_flip() +
-    scale_fill_manual(values = c("Male" = "#b7d3f6", "Female" = "#f4c1d3"), name = NULL) +
-    scale_colour_manual(values = c("Male" = "#256abf", "Female" = "#d55181"), name = NULL) +
+    scale_fill_brewer(palette = "Dark2", name = NULL) +
+    scale_colour_brewer(palette = "Dark2", name = NULL) +
     scale_y_continuous(
       limits = c(-lim, lim),
       breaks = scales::breaks_extended(n = 9),
@@ -1074,7 +1026,7 @@ out_plot_pyramid <- function(linelist, pop_age, census_pop, area = c("Betio", "S
       )
     ) +
     theme_lep_plot +
-    theme(panel.grid.major.y = element_blank(), panel.grid.major.x = element_line(colour = "#e1e0d9", linewidth = 0.3))
+    theme(panel.grid.major.y = element_blank(), panel.grid.major.x = element_line(colour = "grey88", linewidth = 0.3))
 }
 
 # out_plot_age_rate(): all South Tarawa notifications 2018-2025 by age group,
@@ -1103,15 +1055,15 @@ out_plot_age_rate <- function(linelist, pop_age, census_pop, return_data = FALSE
   n_missing_age <- sum(is.na(linelist$pat_age))
 
   ggplot(df, aes(x = age_group)) +
-    geom_col(aes(y = cases), fill = "#c9c7bf", width = 0.85, colour = "white", linewidth = 0.4) +
+    geom_col(aes(y = cases), fill = "grey80", width = 0.85, colour = "white", linewidth = 0.4) +
     geom_text(
       aes(y = pmax(cases, rate * k) + 0.03 * lim, label = cases),
       vjust = 0,
       size = 3,
-      colour = "#0b0b0b"
+      colour = "black"
     ) +
-    geom_line(aes(y = rate * k, group = 1), linetype = "dotted", linewidth = 0.9, colour = "#0b0b0b") +
-    geom_point(aes(y = rate * k), shape = 18, size = 3.6, colour = "#0b0b0b") +
+    geom_line(aes(y = rate * k, group = 1), linetype = "dotted", linewidth = 0.9, colour = "black") +
+    geom_point(aes(y = rate * k), shape = 18, size = 3.6, colour = "black") +
     scale_y_continuous(
       limits = c(0, lim),
       expand = expansion(mult = c(0, 0)),
@@ -1150,8 +1102,8 @@ out_plot_age <- function(linelist) {
     count(age_band, .drop = FALSE)
 
   ggplot(age_bands, aes(x = age_band, y = n)) +
-    geom_col(fill = "#2a78d6", width = 0.7) +
-    geom_text(aes(label = n), vjust = -0.4, colour = "#52514e", size = 3.3) +
+    geom_col(fill = "grey40", width = 0.7) +
+    geom_text(aes(label = n), vjust = -0.4, colour = "grey30", size = 3.3) +
     scale_y_continuous(expand = expansion(mult = c(0, 0.08))) +
     labs(
       title = "Age at diagnosis of leprosy cases, South Tarawa 2018-2025",
@@ -1175,7 +1127,7 @@ out_plot_pathway_year <- function(linelist, start_year = 2023, end_year = 2025) 
     ggplot(aes(x = factor(year), y = n, fill = pathway)) +
     geom_col(position = "stack", colour = "white", linewidth = 0.6, width = 0.7) +
     facet_wrap(~area_group) +
-    scale_fill_manual(values = pal_pathway) +
+    scale_fill_brewer(palette = "Dark2") +
     scale_y_continuous(expand = expansion(mult = c(0, 0.05))) +
     labs(
       title = paste0("Leprosy cases by pathway of detection, ", start_year, "-", end_year),
@@ -1244,14 +1196,13 @@ out_plot_timeseries <- function(
       } else {
         if_else(n > 0, 100 * .data[[indicator]] / n, NA_real_)
       },
-      series = factor(series, levels = ts_style$series)
+      series = fct_relevel(factor(series), "South Tarawa (all)")
     )
 
   if (return_data) {
     return(ts)
   }
 
-  style <- ts_style %>% filter(series %in% ts$series)
   y_label <- c(
     n = "Number of leprosy cases diagnosed",
     male = "% male",
@@ -1262,9 +1213,7 @@ out_plot_timeseries <- function(
   p <- ggplot(ts, aes(x = year, y = value, colour = series, linetype = series, shape = series)) +
     geom_line(linewidth = 0.7, na.rm = TRUE) +
     geom_point(size = 2.4, na.rm = TRUE) +
-    scale_colour_manual(values = setNames(style$colour, style$series)) +
-    scale_linetype_manual(values = setNames(style$linetype, style$series)) +
-    scale_shape_manual(values = setNames(style$shape, style$series)) +
+    scale_colour_brewer(palette = "Dark2") +
     scale_x_continuous(breaks = 2018:2025) +
     labs(
       title = paste0(y_label, " by year of diagnosis"),
@@ -1288,7 +1237,7 @@ out_plot_timeseries <- function(
       geom_vline(
         data = ts_markers,
         aes(xintercept = year),
-        colour = "#898781",
+        colour = "grey55",
         linetype = "dotted",
         inherit.aes = FALSE
       ) +
@@ -1299,7 +1248,7 @@ out_plot_timeseries <- function(
         hjust = 0,
         vjust = -0.5,
         size = 2.8,
-        colour = "#52514e",
+        colour = "grey30",
         inherit.aes = FALSE
       )
   }

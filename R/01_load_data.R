@@ -21,8 +21,8 @@ library(qs2)
 # Load latest raw file ----------------------------------
 
 # Raw filenames end in "rec yymmdd" = date the extract was received
-# e.g. "data for Jeremy rec 260918.xlsx". Latest = most recently received.
-# "^[^~]" skips Excel's temporary lock files.
+# eg "data for Jeremy rec 260918.xlsx"
+# "^[^~]" skips excel temp lock files
 
 raw_files <- dir(
   here("data-raw"),
@@ -37,26 +37,15 @@ raw_dates <- basename(raw_files) %>%
 latest_file <- raw_files[which.max(raw_dates)]
 message("Loading: ", latest_file)
 
-# col_types = "text": every column is read as character, nothing is guessed.
-# .name_repair = "minimal": keep the blank header of column J as it is.
+# col_types = "text": every column is read as character
 linelist_raw <- read_excel(
   latest_file,
-  col_types = "text",
-  .name_repair = "minimal"
+  col_types = "text"
 )
 
-# Name and type each column ---------------------------------------
-
-# Column J has a blank header in the source. Its contents look like a
-# cleaned area/village grouping of pat_village, so it is named pat_area here.
-# Column K's header is a free-text note, renamed to a valid column name.
-# Both renamed by position because one of them has no name to match on.
+# Type each column ---------------------------------------
 
 linelist_typed <- linelist_raw %>%
-  rename(
-    pat_area = 10,
-    pat_sth_tarawa_by_village = 11
-  ) %>%
   mutate(
     patients_id = as.character(patients_id),
     pat_reg_no = as.character(pat_reg_no),
@@ -71,20 +60,19 @@ linelist_typed <- linelist_raw %>%
     ),
     pat_source = as.character(pat_source),
     pat_village = as.character(pat_village),
-    pat_area = as.character(pat_area),
-    pat_sth_tarawa_by_village = as.character(pat_sth_tarawa_by_village),
+    pat_village_clean = as.character(pat_village_clean),
+    pat_st_by_village = as.character(pat_st_by_village),
     pat_present_island = as.character(pat_present_island),
     pat_home_island = as.character(pat_home_island)
   )
 
 # Census population estimates -------------------------------------
 
-# Long file: each row is a population for one place, year and sex. Rows are NOT
-# mutually exclusive - the same people appear at several levels of aggregation
-# (geo = village / council / island / division / oi_st / national), so pick
-# one level per question when using it (see 05_run_outputs.R).
-# data_type_total: "census" (1990, 1995, ... 2020) or annual "estimate".
-# No datestamp in the filename, so this one is read by name.
+# Each row is a population for one place, year and sex
+# Rows are NOT mutually exclusive, multiple levels of aggregation
+# (geo = village / council / island / division / oi_st / national)
+# Pick one level per question when using it (see 05_run_outputs.R)
+# eg data_type_total: "census" (1990, 1995, ... 2020) or annual "estimate"
 
 census_typed <- read_csv(
   here("data-raw", "annual_population_estimates.csv"),
@@ -97,8 +85,8 @@ census_typed <- read_csv(
 
 # 2020 population by age group and sex ------------------------------
 
-# One file each for Betio and all of South Tarawa (5-year age groups, 65+ open).
-# Rows are not in age order in the South Tarawa file - the order is set when used.
+# One file each for Betio and all of South Tarawa (5-year age groups, 65+ open)
+# Rows are not in age order
 
 pop_age_typed <- bind_rows(
   read_csv(

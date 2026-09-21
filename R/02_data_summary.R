@@ -1,8 +1,7 @@
 # Title and description --------------------------------------------
 
-# Data summary tables to assess the typed leprosy linelist and decide what
-# cleaning is needed. Nothing is changed here - this script only describes.
-# Output: one DOCX of tables in outputs/data_checks/
+# Data summary tables to assess the typed leprosy linelist and decide what cleaning is needed
+# Outputs .docx of tables in outputs/data_checks/
 
 # Author:           Jeremy Hill
 # Date commenced:   19 Sep 2026
@@ -23,14 +22,14 @@ linelist <- qs_read(here("data-processed", "linelist_typed.qs2")) %>%
   # Row number in the source spreadsheet (row 1 = header), to find records in Excel
   mutate(excel_row = row_number() + 1L)
 
-# Categorical columns to tabulate, exactly as they appear in the raw data
+# Categorical columns to tabulate
 cat_cols <- c(
   "pat_sex",
   "pat_class",
   "pat_source",
   "pat_village",
-  "pat_area",
-  "pat_sth_tarawa_by_village",
+  "pat_village_clean",
+  "pat_st_by_village",
   "pat_present_island",
   "pat_home_island"
 )
@@ -59,11 +58,10 @@ checks[["Overview"]] <- tibble(
     as.character()
 )
 
-# Completeness and value hygiene per column -----------------------
+# Completeness and value uniqueness per column -----------------------
 
 # n_space_issues: values with leading/trailing/double spaces
-# n_distinct_raw vs n_distinct_normalised: normalised = lower case, spaces
-# trimmed. A difference means the same value is written more than one way.
+# n_distinct_raw vs n_distinct_normalised: normalised = lower case, spaces trimmed. A difference means the same value is written more than one way.
 
 checks[["Completeness by column"]] <- map_dfr(setdiff(names(linelist), "excel_row"), function(col) {
   x <- linelist[[col]]
@@ -139,14 +137,14 @@ checks[["Year by pat_source (raw)"]] <- linelist %>%
   count(year = year(pat_date_of_diagnosis), pat_source) %>%
   pivot_wider(names_from = year, values_from = n, values_fill = 0)
 
-checks[["Year by pat_area (raw)"]] <- linelist %>%
-  count(year = year(pat_date_of_diagnosis), pat_area) %>%
+checks[["Year by pat_village_clean (raw)"]] <- linelist %>%
+  count(year = year(pat_date_of_diagnosis), pat_village_clean) %>%
   pivot_wider(names_from = year, values_from = n, values_fill = 0)
 
 # Age and class consistency -------------------------------------
 
-# pat_class says Child/Adult, pat_age gives the age; child = under 15.
-# These two should agree.
+# pat_class says Child/Adult, pat_age gives the age; child = under 15
+# should agree
 
 class_age <- linelist %>%
   mutate(
@@ -180,10 +178,10 @@ checks[["Age distribution"]] <- linelist %>%
   count(pat_age, name = "n") %>%
   arrange(pat_age)
 
-# Missing data: rows -----------------------------------------------
+# Missing data -----------------------------------------------
 
-# Every row with any missing value, and which columns are missing.
-# Contains register IDs - stays in the local DOCX only.
+# Every row with any missing value, and which columns are missing
+# Contains register IDs - ensure .docx is in .gitignore
 
 checks[["Rows with any missing value"]] <- linelist %>%
   mutate(
@@ -197,7 +195,7 @@ checks[["Rows with any missing value"]] <- linelist %>%
     )
   ) %>%
   filter(missing_columns != "") %>%
-  select(excel_row, patients_id, year, pat_class, pat_source, pat_area, missing_columns)
+  select(excel_row, patients_id, year, pat_class, pat_source, pat_village_clean, missing_columns)
 
 # across() goes first so n_rows is not counted as one of the columns
 checks[["Missing values by column and year"]] <- linelist %>%
@@ -221,22 +219,21 @@ checks[["Possible duplicates (same age, sex, date, village)"]] <- linelist %>%
 # Geography ----------------------------------------------------
 
 # Which raw village maps to which raw area label
-checks[["pat_village by pat_area (raw pairs)"]] <- linelist %>%
-  count(pat_area, pat_village, name = "n") %>%
-  arrange(pat_area, desc(n))
+checks[["pat_village by pat_village_clean (raw pairs)"]] <- linelist %>%
+  count(pat_village_clean, pat_village, name = "n") %>%
+  arrange(pat_village_clean, desc(n))
 
-# pat_area values that are not a single place
-checks[["pat_area: ambiguous labels (contain '/' or '?')"]] <- linelist %>%
-  filter(str_detect(pat_area, "[/?]")) %>%
-  count(pat_area, pat_village, name = "n")
+# pat_village_clean values that are not a single place
+checks[["pat_village_clean: ambiguous labels (contain '/' or '?')"]] <- linelist %>%
+  filter(str_detect(pat_village_clean, "[/?]")) %>%
+  count(pat_village_clean, pat_village, name = "n")
 
-# Residence: rows where present island is not South Tarawa, or the
-# South Tarawa flag and present island disagree
+# Residence: present island is not South Tarawa or inconsistent
 checks[["Residence: present island vs South Tarawa flag"]] <- linelist %>%
-  count(pat_present_island, pat_sth_tarawa_by_village, name = "n") %>%
+  count(pat_present_island, pat_st_by_village, name = "n") %>%
   arrange(desc(n))
 
-# "S Trawa" is treated as a typo for "S Tarawa" here, for listing purposes only
+# "S Trawa" is a typo for "S Tarawa" here, for listing purposes
 checks[["Rows where present island is not South Tarawa"]] <- linelist %>%
   filter(!(pat_present_island %in% c("S Tarawa", "S Trawa"))) %>%
   mutate(year = year(pat_date_of_diagnosis)) %>%
@@ -245,8 +242,8 @@ checks[["Rows where present island is not South Tarawa"]] <- linelist %>%
     patients_id,
     year,
     pat_present_island,
-    pat_sth_tarawa_by_village,
-    pat_area,
+    pat_st_by_village,
+    pat_village_clean,
     pat_village,
     pat_home_island,
     pat_source
