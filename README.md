@@ -14,15 +14,17 @@ Reproducible analysis for a descriptive time-series study of leprosy notificatio
 
 ## Outputs
 
-`outputs/manuscript/`
+Manuscript tables are in `outputs/tables/` and manuscript figures (with their data as CSV) in `outputs/figures/`:
 
 - Table 1: public health activities
-- Table 2: profile of notifications by mode of detection
-- Figure 2: notifications pyramid by age group and sex (count and rate)
-- Figure 3: stacked notification rate by mode of detection, Betio vs rest of South Tarawa
+- Table 2a: profile of notifications by mode of detection, 2022-2025
+- Table 2b: as 2a, all notifications 2018-2025
+- Figure 2a: notifications pyramid by age group and sex (count and rate)
+- Figure 2b: notifications by age group, sexes combined (count and rate)
+- Figure 3: stacked notification rate by mode of detection, rest of South Tarawa vs Betio
 - Figure 4: time series of notification rate and case mix
 
-Figure 1 (orientation map) is not produced by the pipeline. `outputs/tables` and `outputs/figures` hold supplementary outputs and replications of the draft manuscript's tables and figures (`draft_` prefix).
+Figure 1 (orientation map) is not produced by the pipeline. The same folders also hold supplementary outputs and replications of the draft manuscript's tables and figures (`draft_` prefix).
 
 ## Structure
 
@@ -31,8 +33,7 @@ R/                     pipeline scripts
 data-raw/              input data (not in git)
 data-processed/        .qs2 objects (not in git)
 outputs/
-  manuscript/          manuscript tables and figures
-  tables/, figures/    supplementary and draft replications
+  tables/, figures/    manuscript, supplementary and draft outputs
   data_checks/         data summary tables
   data_cleaning/       cleaning rules and data queries, per raw file
 context/               reference material (not in git)

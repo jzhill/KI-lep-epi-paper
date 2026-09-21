@@ -343,6 +343,13 @@ out_tab_casemix <- function(linelist, start_year = 2018, end_year = 2025) {
     arrange(row) %>%
     mutate(row = as.character(row))
 
+  # House-to-house only ran in 2022-2025: flag it when the period starts earlier
+  h2h_note <- NULL
+  if (start_year < 2022) {
+    tab <- tab %>% mutate(row = if_else(row == "House-to-house", "House-to-house*", row))
+    h2h_note <- "*House-to-house mode of case detection was only used in 2022-2025."
+  }
+
   tab %>%
     flextable() %>%
     set_header_labels(
@@ -365,11 +372,14 @@ out_tab_casemix <- function(linelist, start_year = 2018, end_year = 2025) {
     ) %>%
     merge_v(part = "header") %>%
     bold(i = ~ row == "All notifications") %>%
-    add_footer_lines(paste0(
-      "MB = multibacillary; PB = paucibacillary. Child = under 15 years. Male, all adults, all children and disability ",
-      "percentages are of the total for that row; MB and PB percentages are of the adults or children in that row. ",
-      "House-to-house = COMBINE screening, including the 2022 pilot; other active = household contact, population, school ",
-      "and skin camp screening; passive = self-presentation and clinical referral."
+    add_footer_lines(c(
+      paste0(
+        "MB = multibacillary; PB = paucibacillary. Child = under 15 years. Male, all adults, all children and disability ",
+        "percentages are of the total for that row; MB and PB percentages are of the adults or children in that row. ",
+        "House-to-house = COMBINE screening, including the 2022 pilot; other active = household contact, population, school ",
+        "and skin camp screening; passive = self-presentation and clinical referral."
+      ),
+      h2h_note
     )) %>%
     set_caption(paste0(
       "Case mix of leprosy cases by mode of detection, South Tarawa, Kiribati, ",
@@ -438,6 +448,89 @@ out_tab_rates <- function(linelist, census_pop, return_data = FALSE) {
       "Rate = cases / person-years x 10,000. Person-years are the sum of annual population estimates (2020 census; other years intercensal estimates)."
     ) %>%
     set_caption("Annualised leprosy case notification rate, South Tarawa, Kiribati") %>%
+    theme_lep_table()
+}
+
+# out_tab_denominators(): estimated population of South Tarawa by age group and
+# year, 2018-2025, sexes combined - the denominators behind the age-specific
+# rates in Figures 2a and 2b. Each age group's share of the 2020 population
+# (pop_age) is held constant and applied to each year's total population
+# estimate (census_pop). Values are rounded to whole persons for display.
+#   pop_age: tibble(area, age_group [ordered factor], sex, population), 2020
+#   census_pop: tibble(area, year, population), annual total population
+
+out_tab_denominators <- function(pop_age, census_pop) {
+  share <- pop_age %>%
+    filter(area == "South Tarawa") %>%
+    group_by(age_group) %>%
+    summarise(population = sum(population), .groups = "drop") %>%
+    mutate(share = population / sum(population)) %>%
+    select(age_group, share)
+
+  totals <- census_pop %>%
+    filter(area == "South Tarawa (all)", year >= 2018, year <= 2025)
+
+  tab <- share %>%
+    cross_join(totals) %>%
+    mutate(population = share * population) %>%
+    select(age_group, year, population) %>%
+    bind_rows(totals %>% mutate(age_group = "All ages") %>% select(age_group, year, population)) %>%
+    mutate(age_group = factor(age_group, levels = c(levels(share$age_group), "All ages"))) %>%
+    group_by(age_group) %>%
+    mutate(person_years = sum(population)) %>%
+    ungroup() %>%
+    mutate(
+      population = format(round(population), big.mark = ","),
+      person_years = format(round(person_years), big.mark = ",")
+    ) %>%
+    arrange(age_group) %>%
+    pivot_wider(names_from = year, values_from = population) %>%
+    relocate(person_years, .after = last_col()) %>%
+    mutate(age_group = as.character(age_group))
+
+  tab %>%
+    flextable() %>%
+    set_header_labels(age_group = "Age group (years)", person_years = "Person-years 2018-2025") %>%
+    bold(i = ~ age_group == "All ages") %>%
+    add_footer_lines(paste0(
+      "Estimated population = the age group's share of the 2020 census population (age structure held constant) x the ",
+      "annual total population estimate (2020 census; other years intercensal estimates). Sexes combined. ",
+      "Person-years = the sum of the annual estimates, 2018-2025 (the rate denominator in Figures 2a and 2b). ",
+      "Age groups may not sum exactly to the total because of rounding."
+    )) %>%
+    set_caption("Estimated population by age group and year (rate denominators), South Tarawa, Kiribati, 2018-2025") %>%
+    theme_lep_table()
+}
+
+# out_tab_population(): annual population estimates 2018-2025 for South Tarawa,
+# Betio and the rest of South Tarawa - the denominators behind the area-level
+# rates. Person-years = sum of the annual estimates.
+#   census_pop: tibble(area, year, population), annual population per area
+
+out_tab_population <- function(census_pop) {
+  area_levels <- c("South Tarawa (all)", "Betio", "Rest of South Tarawa")
+
+  census_pop %>%
+    filter(year >= 2018, year <= 2025) %>%
+    group_by(area) %>%
+    mutate(person_years = sum(population)) %>%
+    ungroup() %>%
+    mutate(
+      area = factor(area, levels = area_levels),
+      population = format(population, big.mark = ","),
+      person_years = format(person_years, big.mark = ",")
+    ) %>%
+    arrange(area) %>%
+    pivot_wider(names_from = year, values_from = population) %>%
+    relocate(person_years, .after = last_col()) %>%
+    mutate(area = as.character(area)) %>%
+    flextable() %>%
+    set_header_labels(area = "Area", person_years = "Person-years 2018-2025") %>%
+    add_footer_lines(paste0(
+      "Annual population estimates: 2020 census; other years intercensal estimates. ",
+      "Person-years = the sum of the annual estimates, 2018-2025 (the rate denominator)."
+    )) %>%
+    set_caption("Annual population estimates (rate denominators), South Tarawa, Betio and the rest of South Tarawa, 2018-2025") %>%
     theme_lep_table()
 }
 
@@ -641,7 +734,7 @@ out_plot_mode_year <- function(linelist, area = NULL, return_data = FALSE) {
 
 out_plot_rate_mode_stacked <- function(linelist, census_pop, return_data = FALSE) {
   mode_levels <- c("House-to-house", "All other active", "All passive")
-  area_levels <- c("Betio", "Rest of South Tarawa")
+  area_levels <- c("Rest of South Tarawa", "Betio")
 
   rates <- linelist %>%
     mutate(
@@ -673,12 +766,12 @@ out_plot_rate_mode_stacked <- function(linelist, census_pop, return_data = FALSE
   # x positions are on the discrete year axis: 4.5 sits between 2021 and 2022
   markers <- tibble(
     area = factor(area_levels, levels = area_levels),
-    x = c(5.5, 4.5),
-    label = c("House-to-house starts", "2022 pilot")
+    x = c(4.5, 5.5),
+    label = c("2022 pilot", "House-to-house starts")
   )
 
   # Bars are wide relative to their slot (bars in a set sit close together);
-  # a large gap between the two panels separates the two comparison sets.
+  # a modest gap between the two panels separates the two comparison sets.
   ggplot(rates, aes(x = factor(year), y = rate, fill = mode_group)) +
     geom_col(position = "stack", colour = "white", linewidth = 0.6, width = 0.85) +
     geom_text(
@@ -728,7 +821,7 @@ out_plot_rate_mode_stacked <- function(linelist, census_pop, return_data = FALSE
     theme(
       strip.text = element_text(face = "bold", size = 12, hjust = 0, margin = margin(6, 6, 6, 6)),
       strip.background = element_rect(fill = "#f0efec", colour = NA),
-      panel.spacing.x = unit(9, "lines"),
+      panel.spacing.x = unit(4, "lines"),
       axis.text.x = element_text(angle = 45, hjust = 1)
     )
 }
@@ -982,6 +1075,63 @@ out_plot_pyramid <- function(linelist, pop_age, census_pop, area = c("Betio", "S
     ) +
     theme_lep_plot +
     theme(panel.grid.major.y = element_blank(), panel.grid.major.x = element_line(colour = "#e1e0d9", linewidth = 0.3))
+}
+
+# out_plot_age_rate(): all South Tarawa notifications 2018-2025 by age group,
+# sexes combined - age group on the x axis, number of notified cases as bars
+# (left axis) and case notification rate per 10,000 per year as a dotted line
+# with diamonds (right axis; dual axis, scaled so the highest rate reaches the
+# tallest bar). Built from out_plot_pyramid(return_data = TRUE), so cases and
+# the rate denominator (2020 age structure x annual total population) are
+# identical to the pyramid, summed over sex.
+# return_data = TRUE returns cases, person-years and rate per age group
+
+out_plot_age_rate <- function(linelist, pop_age, census_pop, return_data = FALSE) {
+  df <- out_plot_pyramid(linelist, pop_age, census_pop, return_data = TRUE) %>%
+    filter(area == "South Tarawa") %>%
+    group_by(area, age_group) %>%
+    summarise(cases = sum(cases), person_years = sum(person_years), .groups = "drop") %>%
+    mutate(rate = 10000 * cases / person_years)
+
+  if (return_data) {
+    return(df)
+  }
+
+  k <- max(df$cases) / max(df$rate)
+  lim <- 1.15 * max(df$cases)
+
+  n_missing_age <- sum(is.na(linelist$pat_age))
+
+  ggplot(df, aes(x = age_group)) +
+    geom_col(aes(y = cases), fill = "#c9c7bf", width = 0.85, colour = "white", linewidth = 0.4) +
+    geom_text(
+      aes(y = pmax(cases, rate * k) + 0.03 * lim, label = cases),
+      vjust = 0,
+      size = 3,
+      colour = "#0b0b0b"
+    ) +
+    geom_line(aes(y = rate * k, group = 1), linetype = "dotted", linewidth = 0.9, colour = "#0b0b0b") +
+    geom_point(aes(y = rate * k), shape = 18, size = 3.6, colour = "#0b0b0b") +
+    scale_y_continuous(
+      limits = c(0, lim),
+      expand = expansion(mult = c(0, 0)),
+      sec.axis = sec_axis(
+        ~ . / k,
+        name = "Case notification rate per 10,000 per year (dotted line)"
+      )
+    ) +
+    labs(
+      title = "Notifications by age group, South Tarawa 2018-2025",
+      x = "Age group (years)",
+      y = "Number of notified cases (bars)",
+      caption = paste0(
+        "Bars = notified cases 2018-2025 (numbers = cases). Dotted line with diamonds = case notification rate per 10,000\n",
+        "population per year (right axis). Rate denominator: 2020 age structure applied to each year's total population\n",
+        "estimate. ", n_missing_age, " case(s) with missing age excluded."
+      )
+    ) +
+    theme_lep_plot +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
 }
 
 # out_plot_age(): Figure 2 - number of cases by age group at diagnosis.

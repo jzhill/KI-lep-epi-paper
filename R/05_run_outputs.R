@@ -1,11 +1,11 @@
 # Title and description --------------------------------------------
 
 # Runs every output function in 04_output_functions.R on the cleaned linelist
-# and writes tables (DOCX) and figures (PNG):
-#   outputs/manuscript/   the manuscript tables and figures, numbered
-#   outputs/tables/, outputs/figures/   supplementary and working outputs,
-#     including replications of the draft manuscript's tables and figures
-#     (prefixed "draft_") and the 12 mockup time-series plots
+# and writes tables (DOCX) and figures (PNG, with their data as CSV):
+#   outputs/tables/, outputs/figures/   the numbered manuscript tables and
+#     figures, plus supplementary and working outputs, including replications
+#     of the draft manuscript's tables and figures (prefixed "draft_") and the
+#     12 mockup time-series plots
 # Rates per 10,000 use annual population estimates (see Census below).
 
 # Author:           Jeremy Hill
@@ -67,7 +67,6 @@ pop_age <- pop_age_typed %>%
   ) %>%
   select(area, age_group, sex, population)
 
-dir.create(here("outputs", "manuscript"), showWarnings = FALSE, recursive = TRUE)
 dir.create(here("outputs", "tables"), showWarnings = FALSE, recursive = TRUE)
 dir.create(here("outputs", "figures"), showWarnings = FALSE, recursive = TRUE)
 
@@ -78,14 +77,21 @@ landscape <- prop_section(page_size = page_size(orient = "landscape"))
 # Table 1: public health activities (text)
 save_as_docx(
   out_tab_interventions(),
-  path = here("outputs", "manuscript", "table1_public_health_activities.docx"),
+  path = here("outputs", "tables", "table1_public_health_activities.docx"),
   pr_section = landscape
 )
 
-# Table 2: profile of notifications by mode of case detection, 2022-2025
+# Table 2a: profile of notifications by mode of case detection, 2022-2025
 save_as_docx(
   out_tab_casemix(linelist_clean, 2022, 2025),
-  path = here("outputs", "manuscript", "table2_notifications_profile_by_mode_2022_2025.docx"),
+  path = here("outputs", "tables", "table2a_notifications_profile_by_mode_2022_2025.docx"),
+  pr_section = landscape
+)
+
+# Table 2b: as 2a, all notifications 2018-2025
+save_as_docx(
+  out_tab_casemix(linelist_clean, 2018, 2025),
+  path = here("outputs", "tables", "table2b_notifications_profile_by_mode_2018_2025.docx"),
   pr_section = landscape
 )
 
@@ -95,11 +101,11 @@ save_as_docx(
 # data (e.g. the SPC popGIS file data-raw/gis/KIR_EA_Census2020FINAL.geojson)
 # and the sf package.
 
-# Figure 2: notifications pyramid by age group and sex for all of South Tarawa
+# Figure 2a: notifications pyramid by age group and sex for all of South Tarawa
 # (count = bars, rate = dotted line with diamonds). The Betio pyramid is a
 # supplementary figure (outputs/figures/).
 ggsave(
-  here("outputs", "manuscript", "figure2_pyramid_south_tarawa.png"),
+  here("outputs", "figures", "figure2a_pyramid_south_tarawa.png"),
   out_plot_pyramid(linelist_clean, pop_age, census_pop, "South Tarawa"),
   width = 8, height = 6.5, dpi = 300
 )
@@ -112,33 +118,46 @@ ggsave(
 
 write_csv(
   out_plot_pyramid(linelist_clean, pop_age, census_pop, return_data = TRUE),
-  here("outputs", "manuscript", "figure2_pyramid_data.csv")
+  here("outputs", "figures", "figure2a_pyramid_data.csv")
+)
+
+# Figure 2b: as 2a but by age group only (sexes combined), age group on the x
+# axis, count = bars, rate = dotted line with diamonds
+ggsave(
+  here("outputs", "figures", "figure2b_age_group_south_tarawa.png"),
+  out_plot_age_rate(linelist_clean, pop_age, census_pop),
+  width = 9, height = 5.4, dpi = 300
+)
+
+write_csv(
+  out_plot_age_rate(linelist_clean, pop_age, census_pop, return_data = TRUE),
+  here("outputs", "figures", "figure2b_age_group_data.csv")
 )
 
 # Figure 3: stacked notification rate by mode of detection, Betio vs rest of
 # South Tarawa (additionality of house-to-house screening)
 ggsave(
-  here("outputs", "manuscript", "figure3_stacked_rate_by_mode_betio_vs_rest.png"),
+  here("outputs", "figures", "figure3_stacked_rate_by_mode_betio_vs_rest.png"),
   out_plot_rate_mode_stacked(linelist_clean, census_pop),
   width = 10, height = 5.6, dpi = 300
 )
 
 write_csv(
   out_plot_rate_mode_stacked(linelist_clean, census_pop, return_data = TRUE),
-  here("outputs", "manuscript", "figure3_stacked_rate_by_mode_data.csv")
+  here("outputs", "figures", "figure3_stacked_rate_by_mode_data.csv")
 )
 
 # Figure 4: time series - notification rate and case mix (% male, PB, child,
 # any disability), Betio vs rest of South Tarawa
 ggsave(
-  here("outputs", "manuscript", "figure4_timeseries_rate_and_casemix.png"),
+  here("outputs", "figures", "figure4_timeseries_rate_and_casemix.png"),
   out_plot_casemix_time(linelist_clean, census_pop),
   width = 8, height = 11, dpi = 300
 )
 
 write_csv(
   out_plot_casemix_time(linelist_clean, census_pop, return_data = TRUE),
-  here("outputs", "manuscript", "figure4_timeseries_data.csv")
+  here("outputs", "figures", "figure4_timeseries_data.csv")
 )
 
 # Draft manuscript replications (tables) ----------------------------------
@@ -163,16 +182,23 @@ save_as_docx(
 
 # Supplementary tables ---------------------------------------------
 
-# Case mix by mode of detection over the whole study period
-save_as_docx(
-  out_tab_casemix(linelist_clean, 2018, 2025),
-  path = here("outputs", "tables", "table_case_mix_by_mode_2018_2025.docx"),
-  pr_section = landscape
-)
-
 save_as_docx(
   out_tab_rates(linelist_clean, census_pop),
   path = here("outputs", "tables", "table_rates_per_10000.docx"),
+  pr_section = landscape
+)
+
+# Age group denominators by year (for the age-specific rates in Figures 2a, 2b)
+save_as_docx(
+  out_tab_denominators(pop_age, census_pop),
+  path = here("outputs", "tables", "supp_table_age_group_denominators_by_year.docx"),
+  pr_section = landscape
+)
+
+# Annual population denominators by area
+save_as_docx(
+  out_tab_population(census_pop),
+  path = here("outputs", "tables", "supp_table_population_denominators_by_area_year.docx"),
   pr_section = landscape
 )
 
@@ -286,4 +312,4 @@ pmap_dfr(ts_plots, function(file, indicator, groups, markers) {
 }) %>%
   write_csv(here("outputs", "tables", "timeseries_plot_data.csv"))
 
-message("Outputs written to outputs/manuscript, outputs/tables and outputs/figures")
+message("Outputs written to outputs/tables and outputs/figures")
