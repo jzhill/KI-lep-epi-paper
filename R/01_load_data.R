@@ -106,6 +106,16 @@ pop_age_typed <- bind_rows(
     population_2020 = as.integer(population_2020)
   )
 
+# Public health activities (manuscript Table 1) -----------------------
+
+# Text only: one row per activity, the header row gives the column headings
+# (layout in the README).
+
+interventions_typed <- read_csv(
+  here("data-raw", "table1.csv"),
+  col_types = cols(.default = col_character())
+)
+
 # Save ---------------------------------------------------
 
 qs_save(linelist_typed, here("data-processed", "linelist_typed.qs2"))
@@ -116,3 +126,6 @@ message("Saved ", nrow(census_typed), " rows to data-processed/census_typed.qs2"
 
 qs_save(pop_age_typed, here("data-processed", "pop_age_2020_typed.qs2"))
 message("Saved ", nrow(pop_age_typed), " rows to data-processed/pop_age_2020_typed.qs2")
+
+qs_save(interventions_typed, here("data-processed", "interventions_typed.qs2"))
+message("Saved ", nrow(interventions_typed), " rows to data-processed/interventions_typed.qs2")

@@ -4,8 +4,8 @@
 #   out_tab_*  tables (flextable), for DOCX
 #   out_plot_* figures (ggplot2), for PNG
 # All take linelist_clean (03_clean_data.R). 05_run_outputs.R calls each one.
-# Analysis population: all 810 notified cases, 2018-2025, as supplied (see
-# outputs/data_cleaning/<raw filename> - notes.md).
+# Analysis population: all 810 notified cases, 2018-2025
+# Colours: every categorical colour comes from the ColorBrewer "Dark2" palette (scale_colour_brewer / scale_fill_brewer)
 
 # Author:           Jeremy Hill
 # Date commenced:   19 Sep 2026
@@ -20,11 +20,7 @@ library(officer)
 
 # Parameters ----------------------------------------
 
-# Colours: every categorical colour comes from the ColorBrewer "Dark2" palette
-# (scale_colour_brewer / scale_fill_brewer), assigned in factor-level order.
-# Neutrals use R's built-in grey names.
-
-# Public health activity start years (manuscript Table A) for annotated plots
+# Public health activity start years for annotated plots
 ts_markers <- tribble(
   ~year, ~label,
   2018, "SDR PEP starts",
@@ -67,77 +63,22 @@ theme_lep_table <- function(ft, ...) {
 
 # Tables ----------------------------------------------------
 
-# out_tab_interventions(): manuscript Table 1 - public health activities
-# implemented by the NLP and partners during the study period. This is text, not
-# data: reproduced verbatim from Table A of manuscript v5 (edit the wording here
-# if the manuscript changes).
+# out_tab_interventions()
+# A text table describing public health activities implemented by the NLP
+# and partners during the study period
+# Text comes from data-raw/table1.csv (layout in the README)
 
-out_tab_interventions <- function() {
-  tribble(
-    ~activity, ~description, ~years, ~where,
-    "Awareness raising and health promotion",
-    "Community drama, puppet shows, radio interviews, distribution of printed material, public engagement at mass gatherings and etc",
-    "Throughout",
-    "Nationally",
-    "Health worker training",
-    "Routine refresher training and supervision for health workers, focused on primary care nurses and volunteers",
-    "Throughout",
-    "Nationally",
-    "Island-based outreach",
-    "Periodic NLP outreach missions to high burden outer islands, delivering training, supervision, clinical services and ad-hoc ACF, without PEP.",
-    "Until 2022",
-    "Nationally",
-    "ACF – skin camps",
-    "Periodic intensive ‘one stop shop’ screening, diagnosis and treatment services, delivered at temporary clinic facilities and accompanied by mass media health promotion",
-    "2016-2019",
-    "Betio",
-    "ACF – school screening",
-    "School-based skin screening, without PEP",
-    "2016-2019",
-    "South Tarawa",
-    "ACF – hot spots",
-    "Screening drives in hot spot areas, without systematic enumeration or PEP",
-    "2016-2019",
-    "South Tarawa",
-    "Contact investigation",
-    "Ad-hoc, best effort contact investigation without PEP",
-    "Prior to 2018",
-    "Nationally",
-    "SDR PEP",
-    "Systematic identification, screening and follow-up of contacts, with two doses of SDR one year apart",
-    "2018-present; retrospective identification of contacts for index cases 2010-2017",
-    "Nationally",
-    "COMBINE",
-    "Population-wide systematic household-based screening and rifamycin MDA, integrated with TB screening",
-    "2022-present",
-    "Betio and Nanikai",
-    "Island-based ACF+MDA",
-    "Screening and SDR MDA for entire island populations, starting with highest burden outer islands",
-    "2023-present",
-    "High prevalence outer islands",
-    "Village-based ACF+MDA",
-    "Screening and SDR MDA for entire village populations in South Tarawa, starting with highest burden villages not yet reached by COMBINE",
-    "2024-present",
-    "Villages not reached by COMBINE",
-    "Integrated outreach",
-    "Island-based outreach visits coordinated by MHMS, and including the NLP along with staff from other disease programmes and departments.",
-    "2025-present",
-    "Selected outer islands"
-  ) %>%
+out_tab_interventions <- function(interventions) {
+  interventions %>%
     flextable() %>%
-    set_header_labels(
-      activity = "Activity",
-      description = "Description",
-      years = "Years implemented",
-      where = "Where implemented"
-    ) %>%
     set_caption("Table 1. Public health activities implemented by the NLP and partners during the study period.") %>%
     theme_lep_table() %>%
     align(align = "left", part = "all")
 }
 
-# out_tab_year(): Table 1 - cases by year of diagnosis, with sex, class
-# (MB/PB x adult/child) and disability grade. Percentages are of the row total.
+# out_tab_year()
+# Table of cases by year of diagnosis in rows
+# Columns for sex, age, disease class and disability
 
 out_tab_year <- function(linelist) {
   tab <- bind_rows(
@@ -181,9 +122,10 @@ out_tab_year <- function(linelist) {
     theme_lep_table()
 }
 
-# out_tab_pathway(): Tables 2 and 3 - cases in one area and period by pathway
-# of detection (active / passive), with sex, age, class and disability.
-# Percentages are of the row total. Age summaries exclude missing ages.
+# out_tab_pathway()
+# Table of cases in one area and period
+# Rows disaggregated by pathway of detection (active / passive)
+# Columns for sex, age, disease class and disability
 
 out_tab_pathway <- function(linelist, area, start_year, end_year) {
   df <- linelist %>%
@@ -270,11 +212,12 @@ out_tab_pathway <- function(linelist, area, start_year, end_year) {
     theme_lep_table()
 }
 
-# out_tab_casemix(): case mix of notifications by mode of detection over a
-# period (default the whole study period) - house-to-house (COMBINE, incl. 2022
-# pilot) vs all other active vs all passive vs all notifications, all of South
-# Tarawa. Male, all adults, all children and disability are % of the row total;
-# MB and PB are % of the adults (or children) in that row.
+# out_tab_casemix()
+# Table of cases by mode of detection in rows
+# Period defined in parameters (default the whole study period)
+# Columns for sex, age, disease class and disability
+# Male, all adults, all children and disability are % of the row total
+# MB and PB are % of the adults (or children) in that row
 
 out_tab_casemix <- function(linelist, start_year = 2018, end_year = 2025) {
   row_levels <- c("House-to-house", "All other active", "All passive", "All notifications")
@@ -361,8 +304,9 @@ out_tab_casemix <- function(linelist, start_year = 2018, end_year = 2025) {
     theme_lep_table()
 }
 
-# out_tab_rates(): annualised case notification rate per 10,000 population for
-# South Tarawa, Betio and the rest of South Tarawa.
+# out_tab_rates()
+# Table of annualised case notification rate per 10,000 population
+# Rows disaggregated by area (South Tarawa, Betio and the rest of South Tarawa)
 #   rate = cases / person-years x 10,000, with an exact Poisson 95% CI.
 #   person-years = sum of the annual population over the years in the period.
 #   census_pop: tibble(area, year, population) - annual population per area
@@ -424,11 +368,10 @@ out_tab_rates <- function(linelist, census_pop, return_data = FALSE) {
     theme_lep_table()
 }
 
-# out_tab_denominators(): estimated population of South Tarawa by age group and
-# year, 2018-2025, sexes combined - the denominators behind the age-specific
-# rates in Figures 2a and 2b. Each age group's share of the 2020 population
-# (pop_age) is held constant and applied to each year's total population
-# estimate (census_pop). Values are rounded to whole persons for display.
+# out_tab_denominators()
+# Table of estimated population of South Tarawa by age group and year, 2018-2025
+# Denominators for age-specific rates
+# Each age group's share of the 2020 population is held constant and applied to each year's total population
 #   pop_age: tibble(area, age_group [ordered factor], sex, population), 2020
 #   census_pop: tibble(area, year, population), annual total population
 
@@ -475,9 +418,10 @@ out_tab_denominators <- function(pop_age, census_pop) {
     theme_lep_table()
 }
 
-# out_tab_population(): annual population estimates 2018-2025 for South Tarawa,
-# Betio and the rest of South Tarawa - the denominators behind the area-level
-# rates. Person-years = sum of the annual estimates.
+# out_tab_population()
+# Table of annual population estimates 2018-2025, South Tarawa, Betio and rest of South Tarawa
+# Denominators for area-level rates
+# Person-years = sum of the annual estimates
 #   census_pop: tibble(area, year, population), annual population per area
 
 out_tab_population <- function(census_pop) {
@@ -509,8 +453,10 @@ out_tab_population <- function(census_pop) {
 
 # Figures ---------------------------------------------------
 
-# out_plot_rates(): Figure 3 - annualised notification rate per 10,000,
-# 2018-2025, Betio vs rest of South Tarawa, with 95% CI (see out_tab_rates)
+# out_plot_rates()
+# Plot of annualised case notification rate per 10,000 population, 2018-2025
+# Betio vs rest of South Tarawa, with 95% CI
+# Uses out_tab_rates() for the numbers
 
 out_plot_rates <- function(linelist, census_pop) {
   rates <- out_tab_rates(linelist, census_pop, return_data = TRUE) %>%
@@ -536,10 +482,11 @@ out_plot_rates <- function(linelist, census_pop) {
     theme_lep_plot
 }
 
-# out_plot_rate_year(): case notification rate per 10,000 population by year
-# of diagnosis, for South Tarawa (all), Betio and rest of South Tarawa.
-# Each year's cases are divided by that year's population (census_pop).
-# return_data = TRUE returns cases, population and rate per area and year
+# out_plot_rate_year()
+# Plot of case notification rate per 10,000 population by year of diagnosis
+# Lines for South Tarawa (all), Betio and rest of South Tarawa
+# Each year's cases divided by that year's population (census_pop)
+#   return_data = TRUE returns cases, population and rate per area and year
 
 out_plot_rate_year <- function(linelist, census_pop, return_data = FALSE) {
   cases <- bind_rows(
@@ -575,12 +522,12 @@ out_plot_rate_year <- function(linelist, census_pop, return_data = FALSE) {
     theme_lep_plot
 }
 
-# out_plot_rate_mode_year(): case notification rate per 10,000 population by
-# year of diagnosis and mode of detection (active / passive), Betio vs rest of
-# South Tarawa. The denominator is the whole area's population that year, so
-# active + passive = the area's total rate. Panels have separate y scales
-# (active rates are much smaller than passive).
-# return_data = TRUE returns cases, population and rate per area, mode, year
+# out_plot_rate_mode_year()
+# Plot of case notification rate per 10,000 population by year of diagnosis
+# Panels by mode of detection (active / passive), lines for Betio vs rest of South Tarawa
+# Denominator is the whole area's population that year, so active + passive sum to area's total rate
+# Panels have separate y scales - active rates much smaller than passive
+#   return_data = TRUE returns cases, population and rate per area, mode, year
 
 out_plot_rate_mode_year <- function(linelist, census_pop, return_data = FALSE) {
   rates <- linelist %>%
@@ -622,12 +569,12 @@ out_plot_rate_mode_year <- function(linelist, census_pop, return_data = FALSE) {
     )
 }
 
-# out_plot_mode_year(): number of notifications by year of diagnosis, stacked by
-# mode of detection - house-to-house (COMBINE, incl. 2022 pilot), all other
-# active, all passive. Yearly totals labelled.
-#   area: NULL = all of South Tarawa; or "Betio" / "Rest of South Tarawa"
-#   (the 2022 pilot was in the rest of South Tarawa, not Betio)
-# return_data = TRUE returns the counts per year and mode group
+# out_plot_mode_year()
+# Plot of number of notifications by year of diagnosis, stacked by mode of detection
+# Modes: house-to-house (COMBINE, incl. 2022 pilot), all other active, all passive
+# Yearly totals labelled
+#   area: NULL = all of South Tarawa, or "Betio" / "Rest of South Tarawa" (2022 pilot was in rest of South Tarawa, not Betio)
+#   return_data = TRUE returns counts per year and mode group
 
 out_plot_mode_year <- function(linelist, area = NULL, return_data = FALSE) {
   mode_levels <- c("House-to-house", "All other active", "All passive")
@@ -683,14 +630,13 @@ out_plot_mode_year <- function(linelist, area = NULL, return_data = FALSE) {
     theme_lep_plot
 }
 
-# out_plot_rate_mode_stacked(): notification rate per 10,000 population by year
-# of diagnosis, stacked by mode of detection (house-to-house, all other active,
-# all passive), Betio and rest of South Tarawa side by side on the SAME y axis
-# so heights and composition compare directly. Each area's population that year
-# is the denominator (census_pop), so the bar height is the area's total rate.
-# Dotted lines mark when house-to-house began in each area (2022 pilot in the
-# rest of South Tarawa; COMBINE scale-up in Betio from 2023).
-# return_data = TRUE returns cases, population and rate per area, year, mode
+# out_plot_rate_mode_stacked()
+# Plot of notification rate per 10,000 population by year, stacked by mode of detection
+# Modes: house-to-house, all other active, all passive
+# Panels for Betio and rest of South Tarawa, same y axis so heights and composition compare directly
+# Denominator is each area's population that year (census_pop), so bar height is area's total rate
+# Dotted lines mark when house-to-house began in each area (2022 pilot in rest of South Tarawa, COMBINE scale-up in Betio from 2023)
+#   return_data = TRUE returns cases, population and rate per area, year, mode
 
 out_plot_rate_mode_stacked <- function(linelist, census_pop, return_data = FALSE) {
   mode_levels <- c("House-to-house", "All other active", "All passive")
@@ -782,18 +728,15 @@ out_plot_rate_mode_stacked <- function(linelist, census_pop, return_data = FALSE
 
 
 
-# out_plot_casemix_time(): early impact on case notifications and case mix over
-# time, Betio vs rest of South Tarawa, in five stacked panels: case notification
-# rate per 10,000 population (top), then % male, % PB, % child (<15) and % with
-# any disability (grade 1 or 2) among all notifications. The four % panels share
-# one y scale (0-80) so they compare directly; the rate panel has its own.
-# Points = annual value; horizontal lines = pooled value for 2018-22 and
-# 2023-25 (pooled rate = cases / person-years); dotted line = start of 2023-25
-# (house-to-house scale-up in Betio). census_pop: tibble(area, year, population).
-# Grade 2 disability alone is too sparse for annual plotting; its pooled
-# counts are printed in the caption.
-# return_data = TRUE returns annual and period numbers. For the rate rows, n is
-# the population (person-years for periods) and prop is the rate per 10,000.
+# out_plot_casemix_time()
+# Plot of case notifications and case mix over time, Betio vs rest of South Tarawa
+# Five stacked panels: case notification rate per 10,000 population, then % male, % PB, % child (<15), % any disability (grade 1-2)
+# Four % panels share one y scale (0-80) so they compare directly; rate panel has its own
+# Points = annual value, horizontal lines = pooled value for 2018-22 and 2023-25 (pooled rate = cases / person-years)
+# Dotted line = start of 2023-25 (house-to-house scale-up in Betio)
+# Grade 2 disability alone too sparse for annual plotting - pooled counts printed in caption
+#   census_pop: tibble(area, year, population)
+#   return_data = TRUE returns annual and period numbers - for rate rows, n is population (person-years for periods) and prop is rate per 10,000
 
 out_plot_casemix_time <- function(linelist, census_pop, return_data = FALSE) {
   area_levels <- c("Betio", "Rest of South Tarawa")
@@ -911,25 +854,18 @@ out_plot_casemix_time <- function(linelist, census_pop, return_data = FALSE) {
 }
 
 
-# out_plot_pyramid(): notifications pyramid for Betio or all of South Tarawa -
-# number of notified cases 2018-2025 by age group and sex (age on the vertical
-# axis, males left, females right), with the age- and sex-specific case
-# notification rate overlaid as a dotted line with diamonds.
-#   bars (bottom axis)                 = notified cases 2018-2025 (count at bar end)
-#   dotted line + diamonds (top axis)  = case notification rate per 10,000
-#     population per year. Denominator: the 2020 age-and-sex structure (each
-#     band's share of the area's 2020 population, pop_age) held constant and
-#     applied to each year's total population estimate (census_pop), i.e.
-#     person-years for a band = its 2020 share x the area's total person-years
-#     2018-2025
-# The top (rate) axis is scaled so the highest rate in EITHER area reaches the
-# longest bar in that figure, so the rate axes are comparable between the two
-# figures; the two axes are different units (this is a dual-axis chart).
-# Cases with missing age are excluded (counted in the caption).
+# out_plot_pyramid()
+# Plot of notifications pyramid for Betio or all of South Tarawa
+# Notified cases 2018-2025 by age group and sex, age on vertical axis, males left, females right
+# Age- and sex-specific case notification rate overlaid as dotted line with diamonds
+# Bars (bottom axis) = notified cases; dotted line + diamonds (top axis) = rate per 10,000 population per year
+# Rate denominator: 2020 age-and-sex structure (pop_age) held constant, applied to each year's total population (census_pop)
+# Person-years for a band = its 2020 share x area's total person-years 2018-2025
+# Top axis scaled so highest rate in either area reaches longest bar - rate axes comparable between the two figures, dual-axis chart
+# Cases with missing age excluded, counted in caption
 #   pop_age: tibble(area, age_group [ordered factor], sex, population), 2020
 #   census_pop: tibble(area, year, population), annual total population
-# return_data = TRUE returns share, person-years, cases and rate per area, age
-# group, sex
+#   return_data = TRUE returns share, person-years, cases and rate per area, age group, sex
 
 out_plot_pyramid <- function(linelist, pop_age, census_pop, area = c("Betio", "South Tarawa"), return_data = FALSE) {
   area <- match.arg(area)
@@ -1029,14 +965,12 @@ out_plot_pyramid <- function(linelist, pop_age, census_pop, area = c("Betio", "S
     theme(panel.grid.major.y = element_blank(), panel.grid.major.x = element_line(colour = "grey88", linewidth = 0.3))
 }
 
-# out_plot_age_rate(): all South Tarawa notifications 2018-2025 by age group,
-# sexes combined - age group on the x axis, number of notified cases as bars
-# (left axis) and case notification rate per 10,000 per year as a dotted line
-# with diamonds (right axis; dual axis, scaled so the highest rate reaches the
-# tallest bar). Built from out_plot_pyramid(return_data = TRUE), so cases and
-# the rate denominator (2020 age structure x annual total population) are
-# identical to the pyramid, summed over sex.
-# return_data = TRUE returns cases, person-years and rate per age group
+# out_plot_age_rate()
+# Plot of all South Tarawa notifications 2018-2025 by age group, sexes combined
+# Age group on x axis, notified cases as bars (left axis), rate per 10,000 per year as dotted line with diamonds (right axis)
+# Dual axis scaled so highest rate reaches tallest bar
+# Built from out_plot_pyramid(return_data = TRUE), summed over sex - cases and rate denominator identical to the pyramid
+#   return_data = TRUE returns cases, person-years and rate per age group
 
 out_plot_age_rate <- function(linelist, pop_age, census_pop, return_data = FALSE) {
   df <- out_plot_pyramid(linelist, pop_age, census_pop, return_data = TRUE) %>%
@@ -1086,8 +1020,9 @@ out_plot_age_rate <- function(linelist, pop_age, census_pop, return_data = FALSE
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
 }
 
-# out_plot_age(): Figure 2 - number of cases by age group at diagnosis.
-# Cases with missing age are excluded and counted in the caption.
+# out_plot_age()
+# Plot of number of cases by age group at diagnosis
+# Cases with missing age excluded, counted in caption
 
 out_plot_age <- function(linelist) {
   age_bands <- linelist %>%
@@ -1117,8 +1052,9 @@ out_plot_age <- function(linelist) {
     theme_lep_plot
 }
 
-# out_plot_pathway_year(): Figure 4 - cases by year and pathway of detection,
-# Betio and rest of South Tarawa side by side (same y scale).
+# out_plot_pathway_year()
+# Plot of cases by year and pathway of detection
+# Panels for Betio and rest of South Tarawa, same y scale
 
 out_plot_pathway_year <- function(linelist, start_year = 2023, end_year = 2025) {
   linelist %>%
@@ -1138,14 +1074,13 @@ out_plot_pathway_year <- function(linelist, start_year = 2023, end_year = 2025) 
     theme(strip.text = element_text(face = "bold", hjust = 0))
 }
 
-# out_plot_timeseries(): the 12 mockup plots - one indicator by year of
-# diagnosis, for South Tarawa (all) and optionally further series.
-#   indicator: n (cases), male, pb (paucibacillary), child (<15 years), the
-#              last three as % of cases that year
-#   groups:    all | area (Betio, rest) | area_mode (area x active/passive) |
-#              pathway (house-to-house, other active, passive)
-#   markers:   add vertical lines for public health activity start years
-#   return_data = TRUE returns the plotted numbers (n, numerator, value)
+# out_plot_timeseries()
+# Plot of one indicator by year of diagnosis, for South Tarawa (all) and optionally further series
+# Underlies the 12 mockup plots
+#   indicator: n (cases), male, pb (paucibacillary), child (<15 years) - last three as % of cases that year
+#   groups: all | area (Betio, rest) | area_mode (area x active/passive) | pathway (house-to-house, other active, passive)
+#   markers: add vertical lines for public health activity start years
+#   return_data = TRUE returns plotted numbers (n, numerator, value)
 
 out_plot_timeseries <- function(
   linelist,

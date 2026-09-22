@@ -25,6 +25,7 @@ source(here("R", "04_output_functions.R"))
 
 linelist_clean <- qs_read(here("data-processed", "linelist_clean.qs2"))
 census_typed <- qs_read(here("data-processed", "census_typed.qs2"))
+interventions_typed <- qs_read(here("data-processed", "interventions_typed.qs2"))
 
 # Census -------------------------------------------------
 
@@ -76,7 +77,7 @@ landscape <- prop_section(page_size = page_size(orient = "landscape"))
 
 # Table 1: public health activities (text)
 save_as_docx(
-  out_tab_interventions(),
+  out_tab_interventions(interventions_typed),
   path = here("outputs", "tables", "table1_public_health_activities.docx"),
   pr_section = landscape
 )

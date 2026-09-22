@@ -47,6 +47,7 @@ renv/, renv.lock       package environment
    - notification linelist: an `.xlsx` named `... rec YYMMDD.xlsx` (date received; the latest is used)
    - `annual_population_estimates.csv`
    - `2020_betio_agegp_MF.csv` and `2020_st_agegp_MF.csv`
+   - `table1.csv`: the text of Table 1 (see below)
 3. Run the scripts in order:
 
 ```
@@ -55,6 +56,23 @@ Rscript R/02_data_summary.R
 Rscript R/03_clean_data.R
 Rscript R/05_run_outputs.R
 ```
+
+### `data-raw/table1.csv`
+
+Table 1 (public health activities) is text, not data, so it is read from a CSV instead of being written in the code. `R/01_load_data.R` reads it as text and `out_tab_interventions()` in `R/04` builds the table from it.
+
+- UTF-8 CSV (Excel's "CSV UTF-8" is fine; a byte-order mark is handled).
+- One header row, then one row per activity, in the order they should appear.
+- The header cells become the table's column headings, in the same order. All columns are text. Any number of columns works; the current layout has four:
+
+| Column | Content |
+|---|---|
+| `Activity` | Name of the activity |
+| `Description` | What was done |
+| `Years implemented` | For example `2022-present` |
+| `Where implemented` | For example `Betio and Nanikai` |
+
+- Put a value in double quotes if it contains a comma. Do not leave blank rows in the middle.
 
 The data are unpublished and are not included in this repository.
 

@@ -19,7 +19,7 @@ Rscript R/05_run_outputs.R
 ## Structure
 
 - `R/`: numbered pipeline scripts. `04` holds every `out_tab_*` / `out_plot_*` function; `05` only calls them.
-- `data-raw/`: inputs (linelist `.xlsx` named `... rec YYMMDD.xlsx`, census and age-sex population `.csv`). Not in git.
+- `data-raw/`: inputs (linelist `.xlsx` named `... rec YYMMDD.xlsx`, census and age-sex population `.csv`, `table1.csv` = the text of Table 1, layout in the README). Not in git.
 - `data-processed/`: `.qs2` objects. Not in git.
 - `outputs/tables`: numbered manuscript tables (`tableN_`), supplementary tables and `draft_` replications. `outputs/figures`: numbered manuscript figures (`figureN_`) with their data CSVs, supplementary figures and `draft_` replications.
 - `outputs/data_cleaning/<raw filename> - notes.md`: every cleaning rule and data query, by raw file.
