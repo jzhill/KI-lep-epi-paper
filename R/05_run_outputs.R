@@ -1,12 +1,7 @@
 # Title and description --------------------------------------------
 
 # Runs every output function in 04_output_functions.R on the cleaned linelist
-# and writes tables (DOCX) and figures (PNG, with their data as CSV) to
-# outputs/tables/ and outputs/figures/. Tables first, then figures, each in a
-# logical order; "draft_" files replicate a draft manuscript's own tables and
-# figures (their numbering is that document's, not ours); "supp_" files are
-# supplementary. Rates per 10,000 use annual population estimates (see Census
-# below).
+# Writes tables (DOCX) and figures (PNG, data as CSV) to outputs/tables/ and outputs/figures/
 
 # Author:           Jeremy Hill
 # Date commenced:   19 Sep 2026
