@@ -14,17 +14,17 @@ Reproducible analysis for a descriptive time-series study of leprosy notificatio
 
 ## Outputs
 
-Manuscript tables are in `outputs/tables/` and manuscript figures (with their data as CSV) in `outputs/figures/`:
+Tables are in `outputs/tables/` and figures (with their data as CSV) in `outputs/figures/`:
 
-- Table 1: public health activities
-- Table 2a: profile of notifications by mode of detection, 2022-2025
-- Table 2b: as 2a, all notifications 2018-2025
-- Figure 2a: notifications pyramid by age group and sex (count and rate)
-- Figure 2b: notifications by age group, sexes combined (count and rate)
-- Figure 3: stacked notification rate by mode of detection, rest of South Tarawa vs Betio
-- Figure 4: time series of notification rate and case mix
+- `public_health_activities`: public health activities
+- `case_mix_by_mode_2022_2025`, `case_mix_by_mode_2018_2025`: profile of notifications by mode of detection
+- `rates_per_10000`: case notification rate by area
+- `pyramid_south_tarawa`, `supp_pyramid_betio`: notifications pyramid by age group and sex (count and rate)
+- `age_group_count_and_rate`: notifications by age group, sexes combined (count and rate)
+- `rate_by_mode_stacked_betio_vs_rest`: stacked notification rate by mode of detection, rest of South Tarawa vs Betio
+- `rate_and_casemix_over_time`: time series of notification rate and case mix
 
-Figure 1 (orientation map) is not produced by the pipeline. The same folders also hold supplementary outputs and replications of the draft manuscript's tables and figures (`draft_` prefix).
+An orientation map is not produced by the pipeline. The same folders also hold supplementary outputs (`supp_` prefix) and replications of a draft manuscript's own tables and figures, numbered as that document numbers them (`draft_` prefix).
 
 ## Structure
 
