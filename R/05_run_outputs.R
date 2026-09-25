@@ -113,6 +113,18 @@ save_as_docx(
   path = here("outputs", "tables", "case_mix_by_mode_2018_2025_portrait_p_figure_rows.docx")
 )
 
+# Same table by area: Betio 2023-25 (house-to-house period) and the rest of
+# South Tarawa 2018-25 (only 8 house-to-house cases, the 2022 pilot)
+save_as_docx(
+  out_tab_casemix(linelist_clean, 2023, 2025, transpose = TRUE, p_values = TRUE, figure_rows = TRUE, area = "Betio"),
+  path = here("outputs", "tables", "supp_case_mix_by_mode_betio_2023_2025_portrait_p_figure_rows.docx")
+)
+
+save_as_docx(
+  out_tab_casemix(linelist_clean, 2018, 2025, transpose = TRUE, p_values = TRUE, figure_rows = TRUE, area = "Rest of South Tarawa"),
+  path = here("outputs", "tables", "supp_case_mix_by_mode_rest_south_tarawa_2018_2025_portrait_p_figure_rows.docx")
+)
+
 # Case notification rates
 save_as_docx(
   out_tab_rates(linelist_clean, census_pop),

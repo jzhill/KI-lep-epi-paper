@@ -285,6 +285,7 @@ casemix_h2h_v_passive <- function(group, y) {
 # out_tab_casemix()
 # Table of cases by mode of detection in rows
 # Period defined in parameters (default the whole study period)
+# area = NULL (all South Tarawa), "Betio" or "Rest of South Tarawa"
 # Columns for sex, age, disease class and disability
 # Male, all adults, all children and disability are % of the row total
 # MB and PB are % of the adults (or children) in that row
@@ -300,13 +301,14 @@ casemix_h2h_v_passive <- function(group, y) {
 #   grade 2; all % of the column
 
 out_tab_casemix <- function(linelist, start_year = 2018, end_year = 2025,
-                            transpose = FALSE, p_values = FALSE, figure_rows = FALSE) {
+                            transpose = FALSE, p_values = FALSE, figure_rows = FALSE, area = NULL) {
   if (p_values && !transpose) stop("p_values = TRUE needs transpose = TRUE")
   if (figure_rows && !transpose) stop("figure_rows = TRUE needs transpose = TRUE")
 
   row_levels <- c("House-to-house", "All other active", "All passive", "All notifications")
 
   linelist <- linelist %>% filter(year >= start_year, year <= end_year)
+  if (!is.null(area)) linelist <- linelist %>% filter(area_group == area)
 
   tab <- bind_rows(
     linelist %>% filter(pathway == "House-to-house") %>% mutate(row = "House-to-house"),
@@ -512,7 +514,7 @@ out_tab_casemix <- function(linelist, start_year = 2018, end_year = 2025,
       p_note
     )) %>%
     set_caption(paste0(
-      "Case mix of leprosy cases by mode of detection, South Tarawa, Kiribati, ",
+      "Case mix of leprosy cases by mode of detection, ", if (is.null(area)) "South Tarawa" else area, ", Kiribati, ",
       start_year, "-", end_year
     )) %>%
     theme_lep_table()
