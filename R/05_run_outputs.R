@@ -1,7 +1,7 @@
 # Title and description --------------------------------------------
 
 # Runs every output function in 04_output_functions.R on the cleaned linelist
-# Writes tables (DOCX) and figures (PNG, data as CSV) to outputs/tables/ and outputs/figures/
+# Writes tables (DOCX) and figures (PNG, description as TXT, data as CSV) to outputs/tables/ and outputs/figures/
 
 # Author:           Jeremy Hill
 # Date commenced:   19 Sep 2026
@@ -90,6 +90,28 @@ save_as_docx(
   pr_section = landscape
 )
 
+# Same, transposed (portrait) with p-values across the three modes
+save_as_docx(
+  out_tab_casemix(linelist_clean, 2022, 2025, transpose = TRUE, p_values = TRUE),
+  path = here("outputs", "tables", "case_mix_by_mode_2022_2025_portrait_p.docx")
+)
+
+save_as_docx(
+  out_tab_casemix(linelist_clean, 2018, 2025, transpose = TRUE, p_values = TRUE),
+  path = here("outputs", "tables", "case_mix_by_mode_2018_2025_portrait_p.docx")
+)
+
+# Same rows as the time series figure (male, MB, child, any disability)
+save_as_docx(
+  out_tab_casemix(linelist_clean, 2022, 2025, transpose = TRUE, p_values = TRUE, figure_rows = TRUE),
+  path = here("outputs", "tables", "case_mix_by_mode_2022_2025_portrait_p_figure_rows.docx")
+)
+
+save_as_docx(
+  out_tab_casemix(linelist_clean, 2018, 2025, transpose = TRUE, p_values = TRUE, figure_rows = TRUE),
+  path = here("outputs", "tables", "case_mix_by_mode_2018_2025_portrait_p_figure_rows.docx")
+)
+
 # Case notification rates
 save_as_docx(
   out_tab_rates(linelist_clean, census_pop),
@@ -137,16 +159,16 @@ save_as_docx(
 
 # Notifications pyramid by age group and sex (count = bars, rate = dotted line
 # with diamonds), South Tarawa and Betio. Both areas' numbers are in one CSV.
-ggsave(
+save_figure(
   here("outputs", "figures", "pyramid_south_tarawa.png"),
   out_plot_pyramid(linelist_clean, pop_age, census_pop, "South Tarawa"),
-  width = 8, height = 6.5, dpi = 300
+  width = 8, height = 6.5
 )
 
-ggsave(
+save_figure(
   here("outputs", "figures", "supp_pyramid_betio.png"),
   out_plot_pyramid(linelist_clean, pop_age, census_pop, "Betio"),
-  width = 8, height = 6.5, dpi = 300
+  width = 8, height = 6.5
 )
 
 write_csv(
@@ -156,10 +178,10 @@ write_csv(
 
 # As above but by age group only (sexes combined), age group on the x axis,
 # count = bars, rate = dotted line with diamonds
-ggsave(
+save_figure(
   here("outputs", "figures", "age_group_count_and_rate.png"),
   out_plot_age_rate(linelist_clean, pop_age, census_pop),
-  width = 9, height = 5.4, dpi = 300
+  width = 9, height = 5.4
 )
 
 write_csv(
@@ -169,10 +191,10 @@ write_csv(
 
 # Notification rate by mode of detection, stacked, Betio vs rest of South
 # Tarawa (additionality of house-to-house screening)
-ggsave(
+save_figure(
   here("outputs", "figures", "rate_by_mode_stacked_betio_vs_rest.png"),
   out_plot_rate_mode_stacked(linelist_clean, census_pop),
-  width = 10, height = 5.6, dpi = 300
+  width = 10, height = 5.6
 )
 
 write_csv(
@@ -180,12 +202,12 @@ write_csv(
   here("outputs", "figures", "rate_by_mode_stacked_data.csv")
 )
 
-# Notification rate and case mix over time (% male, PB, child, any
+# Notification rate and case mix over time (% male, MB, child, any
 # disability), Betio vs rest of South Tarawa
-ggsave(
+save_figure(
   here("outputs", "figures", "rate_and_casemix_over_time.png"),
   out_plot_casemix_time(linelist_clean, census_pop),
-  width = 8, height = 11, dpi = 300
+  width = 8, height = 11
 )
 
 write_csv(
@@ -194,30 +216,30 @@ write_csv(
 )
 
 # Draft manuscript replications
-ggsave(
+save_figure(
   here("outputs", "figures", "draft_fig2_age_distribution.png"),
   out_plot_age(linelist_clean),
-  width = 8, height = 4.8, dpi = 300
+  width = 8, height = 4.8
 )
 
-ggsave(
+save_figure(
   here("outputs", "figures", "draft_fig3_rate_betio_vs_rest.png"),
   out_plot_rates(linelist_clean, census_pop),
-  width = 6, height = 4.8, dpi = 300
+  width = 6, height = 4.8
 )
 
-ggsave(
+save_figure(
   here("outputs", "figures", "draft_fig4_pathway_by_year_2023_2025.png"),
   out_plot_pathway_year(linelist_clean, 2023, 2025),
-  width = 8, height = 4.8, dpi = 300
+  width = 8, height = 4.8
 )
 
 # Supplementary figures
 
-ggsave(
+save_figure(
   here("outputs", "figures", "notifications_by_mode_by_year_stacked.png"),
   out_plot_mode_year(linelist_clean),
-  width = 9, height = 5.4, dpi = 300
+  width = 9, height = 5.4
 )
 
 write_csv(
@@ -225,10 +247,10 @@ write_csv(
   here("outputs", "figures", "notifications_by_mode_by_year_data.csv")
 )
 
-ggsave(
+save_figure(
   here("outputs", "figures", "notifications_by_mode_by_year_stacked_betio.png"),
   out_plot_mode_year(linelist_clean, area = "Betio"),
-  width = 9, height = 5.4, dpi = 300
+  width = 9, height = 5.4
 )
 
 write_csv(
@@ -236,10 +258,10 @@ write_csv(
   here("outputs", "figures", "notifications_by_mode_by_year_betio_data.csv")
 )
 
-ggsave(
+save_figure(
   here("outputs", "figures", "notifications_by_mode_by_year_stacked_rest_south_tarawa.png"),
   out_plot_mode_year(linelist_clean, area = "Rest of South Tarawa"),
-  width = 9, height = 5.4, dpi = 300
+  width = 9, height = 5.4
 )
 
 write_csv(
@@ -247,10 +269,10 @@ write_csv(
   here("outputs", "figures", "notifications_by_mode_by_year_rest_south_tarawa_data.csv")
 )
 
-ggsave(
+save_figure(
   here("outputs", "figures", "rate_by_year_south_tarawa_betio_rest.png"),
   out_plot_rate_year(linelist_clean, census_pop),
-  width = 8, height = 4.8, dpi = 300
+  width = 8, height = 4.8
 )
 
 write_csv(
@@ -258,10 +280,10 @@ write_csv(
   here("outputs", "figures", "rate_by_year_data.csv")
 )
 
-ggsave(
+save_figure(
   here("outputs", "figures", "rate_by_year_and_mode_betio_vs_rest.png"),
   out_plot_rate_mode_year(linelist_clean, census_pop),
-  width = 9, height = 5.4, dpi = 300
+  width = 9, height = 5.4
 )
 
 write_csv(
@@ -288,10 +310,10 @@ ts_plots <- tribble(
 )
 
 pwalk(ts_plots, function(file, indicator, groups, markers) {
-  ggsave(
+  save_figure(
     here("outputs", "figures", paste0(file, ".png")),
     out_plot_timeseries(linelist_clean, indicator, groups, markers),
-    width = 8, height = 4.8, dpi = 300
+    width = 8, height = 4.8
   )
 })
 

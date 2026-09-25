@@ -61,6 +61,28 @@ theme_lep_table <- function(ft, ...) {
     fit_to_width(max_width = 9)
 }
 
+# Figure output ---------------------------------------------
+
+# save_figure()
+# Drop-in for ggsave() (300 dpi) for the out_plot_* figures
+# Writes the figure's title and caption to a .txt beside the PNG, same name
+# embed_text = FALSE (default): title and caption left out of the PNG so it stands alone
+# embed_text = TRUE: title and caption kept in the PNG as well
+
+save_figure <- function(filename, plot, width, height, embed_text = FALSE) {
+  labs_plot <- get_labs(plot)
+
+  # Caption line breaks are for the plot layout only
+  text <- c(labs_plot$title, labs_plot$caption) %>%
+    str_replace_all("\n", " ") %>%
+    str_squish()
+  write_lines(paste(text, collapse = "\n\n"), str_replace(filename, "\\.png$", ".txt"))
+
+  if (!embed_text) plot <- plot + labs(title = NULL, caption = NULL)
+
+  ggsave(filename, plot, width = width, height = height, dpi = 300)
+}
+
 # Tables ----------------------------------------------------
 
 # out_tab_interventions()
@@ -212,14 +234,46 @@ out_tab_pathway <- function(linelist, area, start_year, end_year) {
     theme_lep_table()
 }
 
+# casemix_p_chisq(), casemix_p_trend()
+# p-values for out_tab_casemix(): x = mode group (1-3), y = characteristic
+# chisq: chi-square, or Fisher's exact (dagger) if any expected count < 5
+# trend: linear-by-linear (Mantel-Haenszel) test, modes scored 1-3 in order
+
+casemix_fmt_p <- function(p) if (p < 0.001) "<0.001" else sprintf("%.3f", p)
+
+casemix_p_chisq <- function(x, y) {
+  counts <- table(x, y)
+  expected <- outer(rowSums(counts), colSums(counts)) / sum(counts)
+  if (any(expected < 5)) {
+    paste0(casemix_fmt_p(fisher.test(counts, workspace = 2e7)$p.value), "†")
+  } else {
+    casemix_fmt_p(chisq.test(counts)$p.value)
+  }
+}
+
+casemix_p_trend <- function(x, y) {
+  r <- cor(as.numeric(x), as.numeric(y))
+  casemix_fmt_p(pchisq((length(x) - 1) * r^2, df = 1, lower.tail = FALSE))
+}
+
 # out_tab_casemix()
 # Table of cases by mode of detection in rows
 # Period defined in parameters (default the whole study period)
 # Columns for sex, age, disease class and disability
 # Male, all adults, all children and disability are % of the row total
 # MB and PB are % of the adults (or children) in that row
+# transpose = TRUE: characteristics in rows, modes in columns (portrait)
+# p_values = TRUE (needs transpose): adds p-value columns comparing the three
+#   modes (chi-square / Fisher, and trend); footer line for them is the last one
+# figure_rows = TRUE (needs transpose): rows are cases, male, MB, child (<15) and
+#   any disability (grade 1-2, as in out_plot_casemix_time()), then grade 1 and
+#   grade 2; all % of the column
 
-out_tab_casemix <- function(linelist, start_year = 2018, end_year = 2025) {
+out_tab_casemix <- function(linelist, start_year = 2018, end_year = 2025,
+                            transpose = FALSE, p_values = FALSE, figure_rows = FALSE) {
+  if (p_values && !transpose) stop("p_values = TRUE needs transpose = TRUE")
+  if (figure_rows && !transpose) stop("figure_rows = TRUE needs transpose = TRUE")
+
   row_levels <- c("House-to-house", "All other active", "All passive", "All notifications")
 
   linelist <- linelist %>% filter(year >= start_year, year <= end_year)
@@ -236,6 +290,8 @@ out_tab_casemix <- function(linelist, start_year = 2018, end_year = 2025) {
     summarise(
       n = n(),
       male = sum(male),
+      mb = sum(leprosy_type == "MB"),
+      any_dis = sum(pat_disability >= 1),
       adult_mb = sum(age_group == "Adult" & leprosy_type == "MB"),
       adult_pb = sum(age_group == "Adult" & leprosy_type == "PB"),
       adult_all = sum(age_group == "Adult"),
@@ -254,7 +310,7 @@ out_tab_casemix <- function(linelist, start_year = 2018, end_year = 2025) {
       child_mb = sprintf("%d (%.1f%%)", child_mb, 100 * child_mb / child_all),
       child_pb = sprintf("%d (%.1f%%)", child_pb, 100 * child_pb / child_all)
     ) %>%
-    mutate(across(c(male, adult_all, child_all, dis1, dis2), ~ sprintf("%d (%.1f%%)", .x, 100 * .x / n))) %>%
+    mutate(across(c(male, mb, any_dis, adult_all, child_all, dis1, dis2), ~ sprintf("%d (%.1f%%)", .x, 100 * .x / n))) %>%
     mutate(n = as.character(n), row = factor(row, levels = row_levels)) %>%
     arrange(row) %>%
     mutate(row = as.character(row))
@@ -266,36 +322,148 @@ out_tab_casemix <- function(linelist, start_year = 2018, end_year = 2025) {
     h2h_note <- "*House-to-house mode of case detection was only used in 2022-2025."
   }
 
-  tab %>%
-    flextable() %>%
-    set_header_labels(
-      row = "Mode of detection",
-      n = "Cases",
-      male = "Male",
-      adult_mb = "MB",
-      adult_pb = "PB",
-      adult_all = "All adults",
-      child_mb = "MB",
-      child_pb = "PB",
-      child_all = "All children",
-      dis1 = "Grade 1",
-      dis2 = "Grade 2"
-    ) %>%
-    add_header_row(
-      values = c("Mode of detection", "Cases", "Male", "Adult", "Child", "Disability"),
-      colwidths = c(1, 1, 1, 3, 3, 2),
-      top = TRUE
-    ) %>%
-    merge_v(part = "header") %>%
-    bold(i = ~ row == "All notifications") %>%
+  p_note <- NULL
+
+  if (!transpose) {
+    ft <- tab %>%
+      select(-mb, -any_dis) %>%
+      flextable() %>%
+      set_header_labels(
+        row = "Mode of detection",
+        n = "Cases",
+        male = "Male",
+        adult_mb = "MB",
+        adult_pb = "PB",
+        adult_all = "All adults",
+        child_mb = "MB",
+        child_pb = "PB",
+        child_all = "All children",
+        dis1 = "Grade 1",
+        dis2 = "Grade 2"
+      ) %>%
+      add_header_row(
+        values = c("Mode of detection", "Cases", "Male", "Adult", "Child", "Disability"),
+        colwidths = c(1, 1, 1, 3, 3, 2),
+        top = TRUE
+      ) %>%
+      merge_v(part = "header") %>%
+      bold(i = ~ row == "All notifications")
+  } else {
+    char_levels <- c(
+      n = "Cases", male = "Male",
+      adult_all = "All adults", adult_mb = "Adult MB", adult_pb = "Adult PB",
+      child_all = "All children", child_mb = "Child MB", child_pb = "Child PB",
+      dis1 = "Disability grade 1", dis2 = "Disability grade 2"
+    )
+    if (figure_rows) {
+      char_levels <- c(
+        n = "Cases", male = "Male", mb = "MB", child_all = "Child (<15 years)",
+        any_dis = "Any disability (grade 1-2)", dis1 = "Grade 1", dis2 = "Grade 2"
+      )
+    }
+
+    tab_t <- tab %>%
+      pivot_longer(-row, names_to = "characteristic", values_to = "value") %>%
+      pivot_wider(names_from = row, values_from = value) %>%
+      filter(characteristic %in% names(char_levels)) %>%
+      mutate(characteristic = factor(characteristic, levels = names(char_levels), labels = char_levels)) %>%
+      arrange(characteristic) %>%
+      mutate(characteristic = as.character(characteristic))
+
+    if (p_values) {
+      # Groups in order 1-3 for the trend test; All notifications not tested
+      test_df <- linelist %>%
+        mutate(group = case_when(
+          pathway == "House-to-house" ~ 1,
+          mode == "Active" ~ 2,
+          mode == "Passive" ~ 3
+        ))
+      adults <- test_df %>% filter(age_group == "Adult")
+      children <- test_df %>% filter(age_group == "Child")
+
+      # Each p-value sits on the first row of its test; MB/PB (detailed layout)
+      # and disability grade p-values span two rows (merged below)
+      if (!figure_rows) {
+        p_tab <- tibble(
+          characteristic = c("Male", "All adults", "Adult MB", "Child MB", "Disability grade 1"),
+          p_chisq = c(
+            casemix_p_chisq(test_df$group, test_df$male),
+            casemix_p_chisq(test_df$group, test_df$age_group),
+            casemix_p_chisq(adults$group, adults$leprosy_type),
+            casemix_p_chisq(children$group, children$leprosy_type),
+            casemix_p_chisq(test_df$group, test_df$pat_disability)
+          ),
+          p_trend = c(
+            casemix_p_trend(test_df$group, test_df$male),
+            casemix_p_trend(test_df$group, test_df$age_group),
+            casemix_p_trend(adults$group, adults$leprosy_type),
+            casemix_p_trend(children$group, children$leprosy_type),
+            casemix_p_trend(test_df$group, test_df$pat_disability)
+          )
+        )
+      } else {
+        p_tab <- tibble(
+          characteristic = c("Male", "MB", "Child (<15 years)", "Any disability (grade 1-2)", "Grade 1"),
+          p_chisq = c(
+            casemix_p_chisq(test_df$group, test_df$male),
+            casemix_p_chisq(test_df$group, test_df$leprosy_type),
+            casemix_p_chisq(test_df$group, test_df$age_group),
+            casemix_p_chisq(test_df$group, test_df$pat_disability >= 1),
+            casemix_p_chisq(test_df$group, test_df$pat_disability)
+          ),
+          p_trend = c(
+            casemix_p_trend(test_df$group, test_df$male),
+            casemix_p_trend(test_df$group, test_df$leprosy_type),
+            casemix_p_trend(test_df$group, test_df$age_group),
+            casemix_p_trend(test_df$group, test_df$pat_disability >= 1),
+            casemix_p_trend(test_df$group, test_df$pat_disability)
+          )
+        )
+      }
+
+      tab_t <- tab_t %>%
+        left_join(p_tab, by = "characteristic") %>%
+        mutate(across(c(p_chisq, p_trend), ~ replace_na(.x, "")))
+
+      # Delete this line (and the p columns) if p-values are dropped
+      p_note <- paste0(
+        "p-values compare house-to-house, other active and passive detection (all notifications not tested). ",
+        "Chi-square test, or Fisher's exact test (†) where any expected count is <5; trend = linear-by-linear ",
+        "(Mantel-Haenszel) test across the modes in that order. Each p-value tests the characteristic as a whole: ",
+        if (!figure_rows) "sex, adult v child, MB v PB (within adults and within children) and disability grade (0, 1, 2). "
+        else "sex, MB v PB, child v adult, any disability (grade 1-2 v none) and disability grade (0, 1, 2). ",
+        "No adjustment for multiple comparisons."
+      )
+    }
+
+    ft <- tab_t %>%
+      flextable() %>%
+      set_header_labels(characteristic = "Characteristic", p_chisq = "p, chi-square / Fisher", p_trend = "p, trend") %>%
+      bold(j = "All notifications")
+
+    if (figure_rows) ft <- padding(ft, i = 6:7, j = 1, padding.left = 12)
+
+    if (p_values) {
+      for (rows in if (figure_rows) list(6:7) else list(4:5, 7:8, 9:10)) {
+        for (col in c("p_chisq", "p_trend")) ft <- merge_at(ft, i = rows, j = col)
+      }
+    }
+  }
+
+  ft %>%
     add_footer_lines(c(
       paste0(
-        "MB = multibacillary; PB = paucibacillary. Child = under 15 years. Male, all adults, all children and disability ",
-        "percentages are of the total for that row; MB and PB percentages are of the adults or children in that row. ",
+        "MB = multibacillary; PB = paucibacillary. Child = under 15 years. ",
+        if (!figure_rows) "Male, all adults, all children and disability percentages are of the total for that " else "Percentages are of the total for that ",
+        if (transpose) "column" else "row",
+        if (!figure_rows) "; MB and PB percentages are of the adults or children in that " else "",
+        if (!figure_rows) (if (transpose) "column" else "row") else "",
+        ". ",
         "House-to-house = COMBINE screening, including the 2022 pilot; other active = household contact, population, school ",
         "and skin camp screening; passive = self-presentation and clinical referral."
       ),
-      h2h_note
+      h2h_note,
+      p_note
     )) %>%
     set_caption(paste0(
       "Case mix of leprosy cases by mode of detection, South Tarawa, Kiribati, ",
@@ -730,7 +898,7 @@ out_plot_rate_mode_stacked <- function(linelist, census_pop, return_data = FALSE
 
 # out_plot_casemix_time()
 # Plot of case notifications and case mix over time, Betio vs rest of South Tarawa
-# Five stacked panels: case notification rate per 10,000 population, then % male, % PB, % child (<15), % any disability (grade 1-2)
+# Five stacked panels: case notification rate per 10,000 population, then % male, % MB, % child (<15), % any disability (grade 1-2)
 # Four % panels share one y scale (0-80) so they compare directly; rate panel has its own
 # Points = annual value, horizontal lines = pooled value for 2018-22 and 2023-25 (pooled rate = cases / person-years)
 # Dotted line = start of 2023-25 (house-to-house scale-up in Betio)
@@ -740,12 +908,12 @@ out_plot_rate_mode_stacked <- function(linelist, census_pop, return_data = FALSE
 
 out_plot_casemix_time <- function(linelist, census_pop, return_data = FALSE) {
   area_levels <- c("Betio", "Rest of South Tarawa")
-  prop_levels <- c("Male", "PB", "Child", "Any disability")
+  prop_levels <- c("Male", "MB", "Child", "Any disability")
   indicator_levels <- c("Rate", prop_levels)
   indicator_labels <- c(
     "Rate" = "Case notification rate (per 10,000 population)",
     "Male" = "% male",
-    "PB" = "% PB",
+    "MB" = "% MB",
     "Child" = "% child (<15)",
     "Any disability" = "% any disability (grade 1-2)"
   )
@@ -761,7 +929,7 @@ out_plot_casemix_time <- function(linelist, census_pop, return_data = FALSE) {
     summarise(
       n = n(),
       Male = sum(male),
-      PB = sum(leprosy_type == "PB"),
+      MB = sum(leprosy_type == "MB"),
       Child = sum(age_group == "Child"),
       `Any disability` = sum(pat_disability >= 1),
       .groups = "drop"
