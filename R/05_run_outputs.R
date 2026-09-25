@@ -101,7 +101,8 @@ save_as_docx(
   path = here("outputs", "tables", "case_mix_by_mode_2018_2025_portrait_p.docx")
 )
 
-# Same rows as the time series figure (male, MB, child, any disability)
+# Same rows as the time series figure (male, MB, child, any disability, grades),
+# with the house-to-house v passive difference (95% CI) and Fisher's exact p
 save_as_docx(
   out_tab_casemix(linelist_clean, 2022, 2025, transpose = TRUE, p_values = TRUE, figure_rows = TRUE),
   path = here("outputs", "tables", "case_mix_by_mode_2022_2025_portrait_p_figure_rows.docx")

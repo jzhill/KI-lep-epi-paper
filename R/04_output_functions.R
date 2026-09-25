@@ -256,6 +256,32 @@ casemix_p_trend <- function(x, y) {
   casemix_fmt_p(pchisq((length(x) - 1) * r^2, df = 1, lower.tail = FALSE))
 }
 
+# casemix_h2h_v_passive()
+# House-to-house (group 1) vs passive (group 3) for a logical characteristic y
+# diff_ci: house-to-house minus passive, percentage points with a Newcombe-Wilson 95% CI
+#   (suits small counts)
+# p_fisher: Fisher's exact p-value
+
+casemix_h2h_v_passive <- function(group, y) {
+  x1 <- sum(y[group == 1])
+  n1 <- sum(group == 1)
+  x2 <- sum(y[group == 3])
+  n2 <- sum(group == 3)
+  p1 <- x1 / n1
+  p2 <- x2 / n2
+  ci1 <- prop.test(x1, n1, correct = FALSE)$conf.int
+  ci2 <- prop.test(x2, n2, correct = FALSE)$conf.int
+  d <- p1 - p2
+  lower <- d - sqrt((p1 - ci1[1])^2 + (ci2[2] - p2)^2)
+  upper <- d + sqrt((ci1[2] - p1)^2 + (p2 - ci2[1])^2)
+  keep <- group %in% c(1, 3)
+
+  tibble(
+    diff_ci = sprintf("%+.1f (%+.1f to %+.1f)", 100 * d, 100 * lower, 100 * upper),
+    p_fisher = casemix_fmt_p(fisher.test(table(group[keep], y[keep]))$p.value)
+  )
+}
+
 # out_tab_casemix()
 # Table of cases by mode of detection in rows
 # Period defined in parameters (default the whole study period)
@@ -263,8 +289,12 @@ casemix_p_trend <- function(x, y) {
 # Male, all adults, all children and disability are % of the row total
 # MB and PB are % of the adults (or children) in that row
 # transpose = TRUE: characteristics in rows, modes in columns (portrait)
-# p_values = TRUE (needs transpose): adds p-value columns comparing the three
-#   modes (chi-square / Fisher, and trend); footer line for them is the last one
+# p_values = TRUE (needs transpose): footer line for the p-value columns is the last one
+#   figure_rows = FALSE: p-value columns comparing the three modes (chi-square /
+#     Fisher, and trend)
+#   figure_rows = TRUE: All notifications first; then the difference between
+#     house-to-house and passive (percentage points, 95% CI) and its Fisher's
+#     exact p-value; one comparison per row
 # figure_rows = TRUE (needs transpose): rows are cases, male, MB, child (<15) and
 #   any disability (grade 1-2, as in out_plot_casemix_time()), then grade 1 and
 #   grade 2; all % of the column
@@ -370,6 +400,12 @@ out_tab_casemix <- function(linelist, start_year = 2018, end_year = 2025,
       arrange(characteristic) %>%
       mutate(characteristic = as.character(characteristic))
 
+    if (figure_rows) {
+      tab_t <- tab_t %>%
+        relocate(`All notifications`, .after = characteristic) %>%
+        rename(`Other active` = `All other active`, Passive = `All passive`)
+    }
+
     if (p_values) {
       # Groups in order 1-3 for the trend test; All notifications not tested
       test_df <- linelist %>%
@@ -402,49 +438,59 @@ out_tab_casemix <- function(linelist, start_year = 2018, end_year = 2025,
           )
         )
       } else {
-        p_tab <- tibble(
-          characteristic = c("Male", "MB", "Child (<15 years)", "Any disability (grade 1-2)", "Grade 1"),
-          p_chisq = c(
-            casemix_p_chisq(test_df$group, test_df$male),
-            casemix_p_chisq(test_df$group, test_df$leprosy_type),
-            casemix_p_chisq(test_df$group, test_df$age_group),
-            casemix_p_chisq(test_df$group, test_df$pat_disability >= 1),
-            casemix_p_chisq(test_df$group, test_df$pat_disability)
-          ),
-          p_trend = c(
-            casemix_p_trend(test_df$group, test_df$male),
-            casemix_p_trend(test_df$group, test_df$leprosy_type),
-            casemix_p_trend(test_df$group, test_df$age_group),
-            casemix_p_trend(test_df$group, test_df$pat_disability >= 1),
-            casemix_p_trend(test_df$group, test_df$pat_disability)
-          )
-        )
+        # Each row is its own comparison of the characteristic against its absence; Cases row has none
+        p_tab <- bind_rows(
+          casemix_h2h_v_passive(test_df$group, test_df$male),
+          casemix_h2h_v_passive(test_df$group, test_df$leprosy_type == "MB"),
+          casemix_h2h_v_passive(test_df$group, test_df$age_group == "Child"),
+          casemix_h2h_v_passive(test_df$group, test_df$pat_disability >= 1),
+          casemix_h2h_v_passive(test_df$group, test_df$pat_disability == 1),
+          casemix_h2h_v_passive(test_df$group, test_df$pat_disability == 2)
+        ) %>%
+          mutate(characteristic = c(
+            "Male", "MB", "Child (<15 years)", "Any disability (grade 1-2)", "Grade 1", "Grade 2"
+          ), .before = 1)
       }
 
       tab_t <- tab_t %>%
         left_join(p_tab, by = "characteristic") %>%
-        mutate(across(c(p_chisq, p_trend), ~ replace_na(.x, "")))
+        mutate(across(all_of(names(p_tab)[-1]), ~ replace_na(.x, "")))
 
       # Delete this line (and the p columns) if p-values are dropped
-      p_note <- paste0(
-        "p-values compare house-to-house, other active and passive detection (all notifications not tested). ",
-        "Chi-square test, or Fisher's exact test (†) where any expected count is <5; trend = linear-by-linear ",
-        "(Mantel-Haenszel) test across the modes in that order. Each p-value tests the characteristic as a whole: ",
-        if (!figure_rows) "sex, adult v child, MB v PB (within adults and within children) and disability grade (0, 1, 2). "
-        else "sex, MB v PB, child v adult, any disability (grade 1-2 v none) and disability grade (0, 1, 2). ",
-        "No adjustment for multiple comparisons."
-      )
+      p_note <- if (!figure_rows) {
+        paste0(
+          "p-values compare house-to-house, other active and passive detection (all notifications not tested). ",
+          "Chi-square test, or Fisher's exact test (†) where any expected count is <5; trend = linear-by-linear ",
+          "(Mantel-Haenszel) test across the modes in that order. Each p-value tests the characteristic as a whole: ",
+          "sex, adult v child, MB v PB (within adults and within children) and disability grade (0, 1, 2). ",
+          "No adjustment for multiple comparisons."
+        )
+      } else {
+        paste0(
+          "H2H = house-to-house. H2H-passive = house-to-house minus passive, in percentage points, with Newcombe-Wilson 95% CI. ",
+          "p = Fisher's exact test, house-to-house v passive only (other active and all notifications not included). ",
+          "Each row is a separate comparison of the characteristic against its absence. ",
+          "No adjustment for multiple comparisons."
+        )
+      }
     }
 
     ft <- tab_t %>%
       flextable() %>%
-      set_header_labels(characteristic = "Characteristic", p_chisq = "p, chi-square / Fisher", p_trend = "p, trend") %>%
-      bold(j = "All notifications")
+      set_header_labels(
+        characteristic = "Characteristic",
+        p_chisq = "p, chi-square / Fisher",
+        p_trend = "p, trend",
+        diff_ci = "H2H-passive (95% CI)",
+        p_fisher = "p"
+      )
+
+    if ("All notifications" %in% names(tab_t)) ft <- bold(ft, j = "All notifications")
 
     if (figure_rows) ft <- padding(ft, i = 6:7, j = 1, padding.left = 12)
 
-    if (p_values) {
-      for (rows in if (figure_rows) list(6:7) else list(4:5, 7:8, 9:10)) {
+    if (p_values && !figure_rows) {
+      for (rows in list(4:5, 7:8, 9:10)) {
         for (col in c("p_chisq", "p_trend")) ft <- merge_at(ft, i = rows, j = col)
       }
     }
