@@ -770,7 +770,7 @@ out_plot_rate_mode_year <- function(linelist, census_pop, return_data = FALSE) {
     scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, 0.05))) +
     labs(
       title = "Leprosy case notification rate by mode of detection",
-      x = "Year of diagnosis",
+      x = NULL,
       y = "Cases per 10,000 population",
       caption = paste0(
         "Active = household contact, house-to-house, population, school and skin camp screening; passive = self-presentation and clinical referral.\n",
@@ -1224,7 +1224,7 @@ out_plot_age_rate <- function(linelist, pop_age, census_pop, return_data = FALSE
     ) +
     labs(
       title = "Notifications by age group, South Tarawa 2018-2025",
-      x = "Age group (years)",
+      x = NULL,
       y = "Number of notified cases (bars)",
       caption = paste0(
         "Bars = notified cases 2018-2025 (numbers = cases). Dotted line with diamonds = case notification rate per 10,000\n",
