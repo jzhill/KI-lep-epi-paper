@@ -120,7 +120,7 @@ save_as_docx(
 save_figure(
   file.path(fig_dir, "Fig2_age_group_count_and_rate.png"),
   out_plot_age_rate(linelist_clean, pop_age, census_pop),
-  width = 9, height = 5.4
+  width = 107, height = 75, units = "mm", eps = TRUE
 )
 
 write_csv(
@@ -132,7 +132,7 @@ write_csv(
 save_figure(
   file.path(fig_dir, "Fig3_count_by_mode_betio_vs_rest.png"),
   out_plot_rate_mode_stacked(linelist_clean, census_pop, use_counts = TRUE),
-  width = 10, height = 5.6
+  width = 107, height = 85, units = "mm", eps = TRUE
 )
 
 # Fig 4: notification rate and case mix over time, Betio vs rest of South Tarawa,
@@ -140,7 +140,7 @@ save_figure(
 save_figure(
   file.path(fig_dir, "Fig4_rate_and_casemix_over_time.png"),
   out_plot_casemix_time(linelist_clean, census_pop),
-  width = 8, height = 11
+  width = 107, height = 170, units = "mm", eps = TRUE
 )
 
 write_csv(

@@ -22,18 +22,19 @@ library(officer)
 
 # Shared themes ---------------------------------------------
 
-theme_lep_plot <- theme_minimal(base_size = 11) +
+theme_lep_plot <- theme_minimal(base_size = 8, base_family = "Arial") +
   theme(
     plot.background = element_rect(fill = "white", colour = NA),
     panel.grid.minor = element_blank(),
     panel.grid.major.x = element_blank(),
     panel.grid.major.y = element_line(colour = "grey88", linewidth = 0.3),
-    axis.text = element_text(colour = "grey30"),
+    axis.text = element_text(colour = "grey30", size = 8),
     axis.title = element_text(colour = "black"),
-    plot.title = element_text(face = "bold", size = 12),
+    plot.title = element_text(face = "bold", size = 9),
     plot.caption = element_text(colour = "grey30", hjust = 0),
     legend.position = "bottom",
-    legend.title = element_blank()
+    legend.title = element_blank(),
+    legend.text = element_text(size = 8)
   )
 
 # theme_lep_table(): grey header, white body, uniform borders, small font
@@ -60,8 +61,10 @@ theme_lep_table <- function(ft, ...) {
 # Writes the figure's title and caption to a .txt beside the PNG, same name
 # embed_text = FALSE (default): title and caption left out of the PNG so it stands alone
 # embed_text = TRUE: title and caption kept in the PNG as well
+# units: units of width and height ("in" default; "mm" for journal sizes)
+# eps = TRUE: also writes a vector EPS beside the PNG, same name (cairo_ps; EPS has no transparency)
 
-save_figure <- function(filename, plot, width, height, embed_text = FALSE) {
+save_figure <- function(filename, plot, width, height, embed_text = FALSE, units = "in", eps = FALSE) {
   labs_plot <- get_labs(plot)
 
   # Caption line breaks are for the plot layout only
@@ -72,7 +75,11 @@ save_figure <- function(filename, plot, width, height, embed_text = FALSE) {
 
   if (!embed_text) plot <- plot + labs(title = NULL, caption = NULL)
 
-  ggsave(filename, plot, width = width, height = height, dpi = 300)
+  ggsave(filename, plot, width = width, height = height, units = units, dpi = 300)
+
+  if (eps) {
+    ggsave(str_replace(filename, "\\.png$", ".eps"), plot, width = width, height = height, units = units, device = cairo_ps)
+  }
 }
 
 # Tables ----------------------------------------------------
@@ -650,7 +657,7 @@ out_plot_pyramid <- function(linelist, pop_age, census_pop, area = c("Betio", "S
 # out_plot_age_rate()
 # Plot of all South Tarawa notifications 2018-2025 by age group, sexes combined
 # Age group on x axis, notified cases as bars (left axis), rate per 10,000 per year as dotted line with diamonds (right axis)
-# Dual axis scaled so highest rate reaches tallest bar
+# Dual axis: 5 cases = 1 rate unit, so left major gridlines (0-150 by 50) align with right ticks (0-30 by 10)
 # Built from out_plot_pyramid(return_data = TRUE), summed over sex - cases and rate denominator identical to the pyramid
 #   return_data = TRUE returns cases, person-years and rate per age group
 
@@ -665,41 +672,37 @@ out_plot_age_rate <- function(linelist, pop_age, census_pop, return_data = FALSE
     return(df)
   }
 
-  k <- max(df$cases) / max(df$rate)
-  lim <- 1.15 * max(df$cases)
-
-  n_missing_age <- sum(is.na(linelist$pat_age))
+  k <- 5
 
   ggplot(df, aes(x = age_group)) +
-    geom_col(aes(y = cases), fill = "grey80", width = 0.85, colour = "white", linewidth = 0.4) +
-    geom_text(
-      aes(y = pmax(cases, rate * k) + 0.03 * lim, label = cases),
-      vjust = 0,
-      size = 3,
-      colour = "black"
-    ) +
-    geom_line(aes(y = rate * k, group = 1), linetype = "dotted", linewidth = 0.9, colour = "black") +
-    geom_point(aes(y = rate * k), shape = 18, size = 3.6, colour = "black") +
+    geom_col(aes(y = cases), fill = "grey80", width = 0.85, colour = "white", linewidth = 0.25) +
+    geom_line(aes(y = rate * k, group = 1), linetype = "dotted", linewidth = 0.5, colour = "black") +
+    geom_point(aes(y = rate * k), shape = 18, size = 2.2, colour = "black") +
     scale_y_continuous(
-      limits = c(0, lim),
+      limits = c(0, 160),
+      breaks = seq(0, 150, 50),
       expand = expansion(mult = c(0, 0)),
       sec.axis = sec_axis(
         ~ . / k,
-        name = "Case notification rate per 10,000 per year (dotted line)"
+        breaks = seq(0, 30, 10),
+        name = "CNR per 10,000 person-years (line)"
       )
     ) +
     labs(
-      title = "Notifications by age group, South Tarawa 2018-2025",
       x = NULL,
-      y = "Number of notified cases (bars)",
+      y = "Notified cases (bars)",
       caption = paste0(
-        "Bars = notified cases 2018-2025 (numbers = cases). Dotted line with diamonds = case notification rate per 10,000\n",
-        "population per year (right axis). Rate denominator: 2020 age structure applied to each year's total population\n",
-        "estimate. ", n_missing_age, " case(s) with missing age excluded."
+        "Figure 2. Leprosy notifications by age group in South Tarawa, Kiribati (2018-2025). ",
+        "Bars: notified cases (left axis). ",
+        "Dotted line with diamonds: case notification rate (CNR) per 10,000 person-years (right axis). ",
+        "Rate denominator: 2020 age structure applied to each year's total population estimate."
       )
     ) +
     theme_lep_plot +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    theme(
+      axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+      panel.grid.minor.y = element_line(colour = "grey94", linewidth = 0.2)
+    )
 }
 
 
@@ -709,7 +712,6 @@ out_plot_age_rate <- function(linelist, pop_age, census_pop, return_data = FALSE
 # Modes: house-to-house, all other active, all passive
 # Panels for Betio and rest of South Tarawa, same y axis so heights and composition compare directly
 # Denominator is each area's population that year (census_pop), so bar height is area's total rate
-# Dotted lines mark when house-to-house began in each area (2022 pilot in rest of South Tarawa, COMBINE scale-up in Betio from 2023)
 #   return_data = TRUE returns cases, population and rate per area, year, mode (unaffected by use_counts)
 
 out_plot_rate_mode_stacked <- function(linelist, census_pop, use_counts = FALSE, return_data = FALSE) {
@@ -745,60 +747,49 @@ out_plot_rate_mode_stacked <- function(linelist, census_pop, use_counts = FALSE,
     group_by(area, year) %>%
     summarise(total = sum(value), .groups = "drop")
 
-  # x positions are on the discrete year axis: 4.5 sits between 2021 and 2022
-  markers <- tibble(
-    area = factor(area_levels, levels = area_levels),
-    x = c(4.5, 5.5),
-    label = c("2022 pilot", "House-to-house starts")
-  )
-
   # Bars are wide relative to their slot (bars in a set sit close together);
   # a modest gap between the two panels separates the two comparison sets.
   ggplot(rates, aes(x = factor(year), y = value, fill = mode_group)) +
-    geom_col(position = "stack", colour = "white", linewidth = 0.6, width = 0.85) +
+    geom_col(position = "stack", colour = "white", linewidth = 0.25, width = 0.85) +
     geom_text(
       data = totals,
       aes(x = factor(year), y = total, label = if (use_counts) sprintf("%d", total) else sprintf("%.1f", total)),
       vjust = -0.5,
       colour = "black",
-      size = 3,
-      inherit.aes = FALSE
-    ) +
-    geom_vline(
-      data = markers,
-      aes(xintercept = x),
-      colour = "grey55",
-      linetype = "dotted",
-      inherit.aes = FALSE
-    ) +
-    geom_text(
-      data = markers,
-      aes(x = x, y = Inf, label = label),
-      hjust = -0.08,
-      vjust = 1.6,
-      size = 3,
-      colour = "grey30",
+      size = 2.8,
       inherit.aes = FALSE
     ) +
     facet_wrap(~area) +
     scale_fill_brewer(palette = "Dark2") +
     scale_y_continuous(expand = expansion(mult = c(0, 0.08))) +
     labs(
-      title = paste0("Leprosy case notification ", if (use_counts) "counts" else "rate", " by mode of detection, 2018-2025"),
+      title = if (use_counts) NULL else "Leprosy case notification rate by mode of detection, 2018-2025",
       x = NULL,
       y = if (use_counts) "Number of notified cases" else "Cases per 10,000 population",
-      caption = paste0(
-        "House-to-house = COMBINE screening (including the 2022 pilot); other active = household contact, population, school and skin camp screening;\n",
-        "passive = self-presentation and clinical referral. Numbers above bars = total ", if (use_counts) "cases" else "rate", ". Same y axis in both panels.",
-        if (use_counts) "" else "\nDenominator: annual population estimates (2020 census; other years estimated)."
-      )
+      caption = if (use_counts) {
+        paste0(
+          "Figure 3. Leprosy case notifications by mode of detection in Betio compared with the rest of South Tarawa, 2018-2025. ",
+          "House-to-house: mass screening as part of the COMBINE project, including the 2022 pilot in the rest of South Tarawa and scale-up in Betio from 2023-2025; ",
+          "all other active: includes screening of household contacts of index cases, school pupils, and attendees at skin camps, and ad-hoc screening at hot-spot locations ; ",
+          "passive: includes self-referral to the skin clinic, or referral from a community clinic or hospital service."
+        )
+      } else {
+        paste0(
+          "House-to-house = COMBINE screening (including the 2022 pilot); other active = household contact, population, school and skin camp screening;
+",
+          "passive = self-presentation and clinical referral. Numbers above bars = total rate. Same y axis in both panels.
+",
+          "Denominator: annual population estimates (2020 census; other years estimated)."
+        )
+      }
     ) +
     theme_lep_plot +
     theme(
-      strip.text = element_text(face = "bold", size = 12, hjust = 0, margin = margin(6, 6, 6, 6)),
+      strip.text = element_text(face = "bold", size = 8, hjust = 0, margin = margin(3, 3, 3, 3)),
       strip.background = element_rect(fill = "grey94", colour = NA),
-      panel.spacing.x = unit(4, "lines"),
-      axis.text.x = element_text(angle = 45, hjust = 1)
+      panel.spacing.x = unit(1, "lines"),
+      legend.key.size = unit(3.5, "mm"),
+      axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
     )
 }
 
@@ -828,8 +819,8 @@ person_years_for_period <- function(pop_area, start_date, end_date, census_pop) 
 # Four % panels share one y scale (0-80) so they compare directly; rate panel has its own
 # Points = annual value; horizontal lines = pooled value for baseline (1/1/2019-31/3/2023) and intervention (1/4/2023-31/12/2025) periods
 # Dotted line = 1 April 2023, COMBINE house-to-house scale-up in Betio
+# Solid colours only (no alpha) so the EPS stays vector
 # Annual points and their line/rate use all years 2018-2025
-# Annual points and their line/rate still use all years 2018-2025, unchanged
 # Person-years for the bars are prorated by day for the part-year at the April 2023 cut
 #   census_pop: tibble(area, year, population)
 #   return_data = TRUE returns annual and period numbers - for rate rows, n is population (person-years for periods) and prop is rate per 10,000
@@ -839,9 +830,9 @@ out_plot_casemix_time <- function(linelist, census_pop, return_data = FALSE) {
   prop_levels <- c("Male", "MB", "Child", "Any disability")
   indicator_levels <- c("Rate", prop_levels)
   indicator_labels <- c(
-    "Rate" = "Case notification rate (per 10,000 population)",
+    "Rate" = "CNR per 10,000 person-years",
     "Male" = "% male",
-    "MB" = "% MB",
+    "MB" = "% multibacillary",
     "Child" = "% child (<15)",
     "Any disability" = "% any disability (grade 1-2)"
   )
@@ -902,22 +893,12 @@ out_plot_casemix_time <- function(linelist, census_pop, return_data = FALSE) {
     return(bind_rows(annual %>% mutate(kind = "annual"), periods %>% mutate(kind = "period")))
   }
 
-  # Grade 2 disability, pooled, for the caption
-  g2 <- pmap_dfr(period_bounds, function(period, start_date, end_date) {
-    base %>%
-      filter(pat_date_of_diagnosis >= start_date, pat_date_of_diagnosis <= end_date) %>%
-      group_by(area) %>%
-      summarise(g2 = sum(pat_disability == 2), n = n(), .groups = "drop") %>%
-      mutate(period = period)
-  }) %>%
-    mutate(text = sprintf("%d/%d (%.1f%%)", g2, n, 100 * g2 / n))
-  g2_text <- function(a, p) g2$text[g2$area == a & g2$period == p]
-
   annual <- annual %>%
     mutate(
       area = factor(area, levels = area_levels),
       indicator = factor(indicator, levels = indicator_levels, labels = indicator_labels)
-    )
+    ) %>%
+    arrange(desc(area))
   periods <- periods %>%
     mutate(
       area = factor(area, levels = area_levels),
@@ -927,7 +908,8 @@ out_plot_casemix_time <- function(linelist, census_pop, return_data = FALSE) {
       # padding as the annual points they sit within)
       x_start = if_else(x_start == min(period_bounds$start_date), year(min(period_bounds$start_date)) - 0.35, cutoff_x + 0.15),
       x_end = if_else(x_end == max(period_bounds$end_date), year(max(period_bounds$end_date)) + 0.35, cutoff_x - 0.15)
-    )
+    ) %>%
+    arrange(desc(area))
 
   # Invisible points that force all four % panels to the same 0-80 y range
   common_range <- tibble(
@@ -937,41 +919,36 @@ out_plot_casemix_time <- function(linelist, census_pop, return_data = FALSE) {
   )
 
   ggplot(annual, aes(x = year, y = prop, colour = area, shape = area)) +
-    geom_vline(xintercept = cutoff_x, colour = "grey55", linetype = "dotted") +
+    geom_vline(xintercept = cutoff_x, colour = "grey55", linetype = "dotted", linewidth = 0.3) +
     geom_blank(data = common_range, aes(x = year, y = prop), inherit.aes = FALSE) +
     geom_segment(
       data = periods,
       aes(x = x_start, xend = x_end, y = prop, yend = prop, colour = area),
-      linewidth = 1.1,
-      alpha = 0.75,
+      linewidth = 0.9,
       inherit.aes = FALSE
     ) +
-    geom_line(linewidth = 0.4, alpha = 0.6) +
-    geom_point(size = 2.2) +
+    geom_line(linewidth = 0.3) +
+    geom_point(size = 1.6) +
     facet_wrap(~indicator, ncol = 1, scales = "free_y") +
     scale_colour_brewer(palette = "Dark2") +
     scale_x_continuous(breaks = 2018:2025) +
     scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, 0.05))) +
     labs(
-      title = "Case notification rate and case mix over time, Betio vs rest of South Tarawa",
+      title = NULL,
       x = "Year of diagnosis",
       y = NULL,
       caption = paste0(
-        "Points = annual value (2018-2025); horizontal lines = pooled value for the baseline (1 January 2019-31\n",
-        "March 2023) and intervention (1 April 2023-31 December 2025) periods. Dotted line = 1 April 2023, when\n",
-        "COMBINE house-to-house screening started in Betio. % panels are % of all notifications and share one y\n",
-        "scale. Rate denominator: annual population estimates (2020 census; other years estimated), prorated by day\n",
-        "for the part-year at the cut. Annual values rest on small numbers.\n",
-        "Grade 2 disability, baseline vs intervention: Betio ", g2_text("Betio", "Baseline (Jan 2019-Mar 2023)"),
-        " vs ", g2_text("Betio", "Intervention (Apr 2023-Dec 2025)"),
-        "; rest of South Tarawa ", g2_text("Rest of South Tarawa", "Baseline (Jan 2019-Mar 2023)"),
-        " vs ", g2_text("Rest of South Tarawa", "Intervention (Apr 2023-Dec 2025)"), "."
+        "Figure 4. Leprosy case notification rate (CNR) and characteristics over time in Betio compared with the rest of South Tarawa, 2018-2025. ",
+        "Points: annual values; horizontal bars: pooled values for periods before implementation of house-to-house screening in Betio ",
+        "(1 January 2019 to 31 March 2023, 2018 excluded to isolate screening trends) and after (1 April 2023 to 31 December 2025); ",
+        "vertical dotted line: commencement of mass house-to-house screening in Betio (31 March 2023)."
       )
     ) +
     theme_lep_plot +
     theme(
-      strip.text = element_text(face = "bold", size = 10, hjust = 0),
-      strip.background = element_rect(fill = "grey94", colour = NA)
+      strip.text = element_text(face = "bold", size = 8, hjust = 0, margin = margin(3, 3, 3, 3)),
+      strip.background = element_rect(fill = "grey94", colour = NA),
+      legend.key.size = unit(3.5, "mm")
     )
 }
 
