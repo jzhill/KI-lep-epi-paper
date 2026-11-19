@@ -1,7 +1,9 @@
 # Title and description --------------------------------------------
 
-# Runs every output function in 04_output_functions.R on the cleaned linelist
-# Writes tables (DOCX) and figures (PNG, description as TXT, data as CSV) to outputs/tables/ and outputs/figures/
+# Runs the output functions in 04_output_functions.R for the manuscript's tables and figures
+# Files are named by manuscript item (Table 2, Fig 3, SuppTable 1...)
+# Writes tables (DOCX) to outputs/paper/tables/, figures (PNG, description as TXT, data as CSV) to outputs/paper/figures/
+# Not produced here: Table 1 (text table, written directly in the manuscript) and Fig 1 (map, made in a separate repo)
 
 # Author:           Jeremy Hill
 # Date commenced:   19 Sep 2026
@@ -20,7 +22,6 @@ source(here("R", "04_output_functions.R"))
 
 linelist_clean <- qs_read(here("data-processed", "linelist_clean.qs2"))
 census_typed <- qs_read(here("data-processed", "census_typed.qs2"))
-interventions_typed <- qs_read(here("data-processed", "interventions_typed.qs2"))
 
 # Census -------------------------------------------------
 
@@ -63,278 +64,88 @@ pop_age <- pop_age_typed %>%
   ) %>%
   select(area, age_group, sex, population)
 
-dir.create(here("outputs", "tables"), showWarnings = FALSE, recursive = TRUE)
-dir.create(here("outputs", "figures"), showWarnings = FALSE, recursive = TRUE)
+tab_dir <- here("outputs", "paper", "tables")
+fig_dir <- here("outputs", "paper", "figures")
+dir.create(tab_dir, showWarnings = FALSE, recursive = TRUE)
+dir.create(fig_dir, showWarnings = FALSE, recursive = TRUE)
 
 landscape <- prop_section(page_size = page_size(orient = "landscape"))
 
 # Tables ----------------------------------------------------
 
-# Public health activities (text)
-save_as_docx(
-  out_tab_interventions(interventions_typed),
-  path = here("outputs", "tables", "public_health_activities.docx"),
-  pr_section = landscape
-)
-
-# Case mix by mode of detection
-save_as_docx(
-  out_tab_casemix(linelist_clean, 2022, 2025),
-  path = here("outputs", "tables", "case_mix_by_mode_2022_2025.docx"),
-  pr_section = landscape
-)
-
-save_as_docx(
-  out_tab_casemix(linelist_clean, 2018, 2025),
-  path = here("outputs", "tables", "case_mix_by_mode_2018_2025.docx"),
-  pr_section = landscape
-)
-
-# Same, transposed (portrait) with p-values across the three modes
-save_as_docx(
-  out_tab_casemix(linelist_clean, 2022, 2025, transpose = TRUE, p_values = TRUE),
-  path = here("outputs", "tables", "case_mix_by_mode_2022_2025_portrait_p.docx")
-)
-
-save_as_docx(
-  out_tab_casemix(linelist_clean, 2018, 2025, transpose = TRUE, p_values = TRUE),
-  path = here("outputs", "tables", "case_mix_by_mode_2018_2025_portrait_p.docx")
-)
-
-# Same rows as the time series figure (male, MB, child, any disability, grades),
-# with the house-to-house v passive difference (95% CI) and Fisher's exact p
-save_as_docx(
-  out_tab_casemix(linelist_clean, 2022, 2025, transpose = TRUE, p_values = TRUE, figure_rows = TRUE),
-  path = here("outputs", "tables", "case_mix_by_mode_2022_2025_portrait_p_figure_rows.docx")
-)
-
+# Table 2: case mix by mode of detection, South Tarawa 2018-2025
 save_as_docx(
   out_tab_casemix(linelist_clean, 2018, 2025, transpose = TRUE, p_values = TRUE, figure_rows = TRUE),
-  path = here("outputs", "tables", "case_mix_by_mode_2018_2025_portrait_p_figure_rows.docx")
+  path = file.path(tab_dir, "Table2_case_mix_by_mode_2018_2025.docx")
 )
 
-# Same table by area: Betio 2023-25 (house-to-house period) and the rest of
-# South Tarawa 2018-25 (only 8 house-to-house cases, the 2022 pilot)
-save_as_docx(
-  out_tab_casemix(linelist_clean, 2023, 2025, transpose = TRUE, p_values = TRUE, figure_rows = TRUE, area = "Betio"),
-  path = here("outputs", "tables", "supp_case_mix_by_mode_betio_2023_2025_portrait_p_figure_rows.docx")
-)
-
-save_as_docx(
-  out_tab_casemix(linelist_clean, 2018, 2025, transpose = TRUE, p_values = TRUE, figure_rows = TRUE, area = "Rest of South Tarawa"),
-  path = here("outputs", "tables", "supp_case_mix_by_mode_rest_south_tarawa_2018_2025_portrait_p_figure_rows.docx")
-)
-
-# Case notification rates
-save_as_docx(
-  out_tab_rates(linelist_clean, census_pop),
-  path = here("outputs", "tables", "rates_per_10000.docx"),
-  pr_section = landscape
-)
-
-# Population denominators
+# Supp Table 1: population by age group and year
 save_as_docx(
   out_tab_denominators(pop_age, census_pop),
-  path = here("outputs", "tables", "supp_age_group_denominators_by_year.docx"),
+  path = file.path(tab_dir, "SuppTable1_age_group_denominators_by_year.docx"),
   pr_section = landscape
 )
 
+# Supp Table 2: population by area and year (rate denominators)
 save_as_docx(
   out_tab_population(census_pop),
-  path = here("outputs", "tables", "supp_population_denominators_by_area_year.docx"),
+  path = file.path(tab_dir, "SuppTable2_population_denominators_by_area_year.docx"),
   pr_section = landscape
 )
 
-# Draft manuscript replications
+# Supp Table 3: case mix by mode, Betio 2023-25 (house-to-house period)
 save_as_docx(
-  out_tab_year(linelist_clean),
-  path = here("outputs", "tables", "draft_table1_cases_by_year.docx"),
-  pr_section = landscape
+  out_tab_casemix(linelist_clean, 2023, 2025, transpose = TRUE, p_values = TRUE, figure_rows = TRUE, area = "Betio"),
+  path = file.path(tab_dir, "SuppTable3_case_mix_by_mode_betio_2023_2025.docx")
 )
 
+# Supp Table 4: case mix by mode, rest of South Tarawa 2018-25 (only 8 house-to-house cases, the 2022 pilot)
 save_as_docx(
-  out_tab_pathway(linelist_clean, "Betio", 2023, 2025),
-  path = here("outputs", "tables", "draft_table2_betio_2023_2025_by_pathway.docx"),
-  pr_section = landscape
+  out_tab_casemix(linelist_clean, 2018, 2025, transpose = TRUE, p_values = TRUE, figure_rows = TRUE, area = "Rest of South Tarawa"),
+  path = file.path(tab_dir, "SuppTable4_case_mix_by_mode_rest_south_tarawa_2018_2025.docx")
 )
 
+# Supp Table 5: notifications, person-years and rate by area and period, split at 1 April 2023, study period from 1 January 2019
 save_as_docx(
-  out_tab_pathway(linelist_clean, "Rest of South Tarawa", 2018, 2025),
-  path = here("outputs", "tables", "draft_table3_rest_south_tarawa_2018_2025_by_pathway.docx"),
+  out_tab_rates_period(linelist_clean, census_pop, start_date = as.Date("2019-01-01")),
+  path = file.path(tab_dir, "SuppTable5_rates_by_period.docx"),
   pr_section = landscape
 )
 
 # Figures ---------------------------------------------------
 
-# Orientation map of South Tarawa - NOT BUILT YET. Needs boundary data (e.g.
-# the SPC popGIS file data-raw/gis/KIR_EA_Census2020FINAL.geojson) and the sf
-# package.
+# Fig 1: orientation map - made in a separate repo
 
-# Notifications pyramid by age group and sex (count = bars, rate = dotted line
-# with diamonds), South Tarawa and Betio. Both areas' numbers are in one CSV.
+# Fig 2: notifications by age group (count = bars, rate = dotted line with diamonds), South Tarawa
 save_figure(
-  here("outputs", "figures", "pyramid_south_tarawa.png"),
-  out_plot_pyramid(linelist_clean, pop_age, census_pop, "South Tarawa"),
-  width = 8, height = 6.5
-)
-
-save_figure(
-  here("outputs", "figures", "supp_pyramid_betio.png"),
-  out_plot_pyramid(linelist_clean, pop_age, census_pop, "Betio"),
-  width = 8, height = 6.5
-)
-
-write_csv(
-  out_plot_pyramid(linelist_clean, pop_age, census_pop, return_data = TRUE),
-  here("outputs", "figures", "pyramid_data.csv")
-)
-
-# As above but by age group only (sexes combined), age group on the x axis,
-# count = bars, rate = dotted line with diamonds
-save_figure(
-  here("outputs", "figures", "age_group_count_and_rate.png"),
+  file.path(fig_dir, "Fig2_age_group_count_and_rate.png"),
   out_plot_age_rate(linelist_clean, pop_age, census_pop),
   width = 9, height = 5.4
 )
 
 write_csv(
   out_plot_age_rate(linelist_clean, pop_age, census_pop, return_data = TRUE),
-  here("outputs", "figures", "age_group_count_and_rate_data.csv")
+  file.path(fig_dir, "Fig2_age_group_count_and_rate_data.csv")
 )
 
-# Notification rate by mode of detection, stacked, Betio vs rest of South
-# Tarawa (additionality of house-to-house screening)
+# Fig 3: notification counts by mode of detection, Betio vs rest of South Tarawa
 save_figure(
-  here("outputs", "figures", "rate_by_mode_stacked_betio_vs_rest.png"),
-  out_plot_rate_mode_stacked(linelist_clean, census_pop),
+  file.path(fig_dir, "Fig3_count_by_mode_betio_vs_rest.png"),
+  out_plot_rate_mode_stacked(linelist_clean, census_pop, use_counts = TRUE),
   width = 10, height = 5.6
 )
 
-write_csv(
-  out_plot_rate_mode_stacked(linelist_clean, census_pop, return_data = TRUE),
-  here("outputs", "figures", "rate_by_mode_stacked_data.csv")
-)
-
-# Notification rate and case mix over time (% male, MB, child, any
-# disability), Betio vs rest of South Tarawa
+# Fig 4: notification rate and case mix over time, Betio vs rest of South Tarawa,
+# baseline (1 Jan 2019-31 Mar 2023) v intervention (1 Apr 2023-31 Dec 2025)
 save_figure(
-  here("outputs", "figures", "rate_and_casemix_over_time.png"),
+  file.path(fig_dir, "Fig4_rate_and_casemix_over_time.png"),
   out_plot_casemix_time(linelist_clean, census_pop),
   width = 8, height = 11
 )
 
 write_csv(
   out_plot_casemix_time(linelist_clean, census_pop, return_data = TRUE),
-  here("outputs", "figures", "rate_and_casemix_over_time_data.csv")
+  file.path(fig_dir, "Fig4_rate_and_casemix_over_time_data.csv")
 )
 
-# Draft manuscript replications
-save_figure(
-  here("outputs", "figures", "draft_fig2_age_distribution.png"),
-  out_plot_age(linelist_clean),
-  width = 8, height = 4.8
-)
-
-save_figure(
-  here("outputs", "figures", "draft_fig3_rate_betio_vs_rest.png"),
-  out_plot_rates(linelist_clean, census_pop),
-  width = 6, height = 4.8
-)
-
-save_figure(
-  here("outputs", "figures", "draft_fig4_pathway_by_year_2023_2025.png"),
-  out_plot_pathway_year(linelist_clean, 2023, 2025),
-  width = 8, height = 4.8
-)
-
-# Supplementary figures
-
-save_figure(
-  here("outputs", "figures", "notifications_by_mode_by_year_stacked.png"),
-  out_plot_mode_year(linelist_clean),
-  width = 9, height = 5.4
-)
-
-write_csv(
-  out_plot_mode_year(linelist_clean, return_data = TRUE),
-  here("outputs", "figures", "notifications_by_mode_by_year_data.csv")
-)
-
-save_figure(
-  here("outputs", "figures", "notifications_by_mode_by_year_stacked_betio.png"),
-  out_plot_mode_year(linelist_clean, area = "Betio"),
-  width = 9, height = 5.4
-)
-
-write_csv(
-  out_plot_mode_year(linelist_clean, area = "Betio", return_data = TRUE),
-  here("outputs", "figures", "notifications_by_mode_by_year_betio_data.csv")
-)
-
-save_figure(
-  here("outputs", "figures", "notifications_by_mode_by_year_stacked_rest_south_tarawa.png"),
-  out_plot_mode_year(linelist_clean, area = "Rest of South Tarawa"),
-  width = 9, height = 5.4
-)
-
-write_csv(
-  out_plot_mode_year(linelist_clean, area = "Rest of South Tarawa", return_data = TRUE),
-  here("outputs", "figures", "notifications_by_mode_by_year_rest_south_tarawa_data.csv")
-)
-
-save_figure(
-  here("outputs", "figures", "rate_by_year_south_tarawa_betio_rest.png"),
-  out_plot_rate_year(linelist_clean, census_pop),
-  width = 8, height = 4.8
-)
-
-write_csv(
-  out_plot_rate_year(linelist_clean, census_pop, return_data = TRUE),
-  here("outputs", "figures", "rate_by_year_data.csv")
-)
-
-save_figure(
-  here("outputs", "figures", "rate_by_year_and_mode_betio_vs_rest.png"),
-  out_plot_rate_mode_year(linelist_clean, census_pop),
-  width = 9, height = 5.4
-)
-
-write_csv(
-  out_plot_rate_mode_year(linelist_clean, census_pop, return_data = TRUE),
-  here("outputs", "figures", "rate_by_year_and_mode_data.csv")
-)
-
-# The 12 mockup plots, as real annual series
-ts_plots <- tribble(
-  ~file, ~indicator, ~groups, ~markers,
-  "01_notifications_south_tarawa_all", "n", "all", FALSE,
-  "02_prop_male_south_tarawa_all", "male", "all", FALSE,
-  "03_notifications_betio_vs_rest", "n", "area", FALSE,
-  "04_prop_male_betio_vs_rest", "male", "area", FALSE,
-  "04b_prop_male_betio_vs_rest_annotated", "male", "area", TRUE,
-  "05_prop_pb_betio_vs_rest", "pb", "area", FALSE,
-  "06_prop_child_betio_vs_rest", "child", "area", FALSE,
-  "07_prop_male_by_area_and_mode", "male", "area_mode", FALSE,
-  "08_prop_pb_by_area_and_mode", "pb", "area_mode", FALSE,
-  "09_prop_child_by_area_and_mode", "child", "area_mode", FALSE,
-  "10_prop_male_by_pathway", "male", "pathway", FALSE,
-  "11_prop_pb_by_pathway", "pb", "pathway", FALSE,
-  "12_prop_child_by_pathway", "child", "pathway", FALSE
-)
-
-pwalk(ts_plots, function(file, indicator, groups, markers) {
-  save_figure(
-    here("outputs", "figures", paste0(file, ".png")),
-    out_plot_timeseries(linelist_clean, indicator, groups, markers),
-    width = 8, height = 4.8
-  )
-})
-
-# Numbers behind every time series plot (table view of the figures)
-pmap_dfr(ts_plots, function(file, indicator, groups, markers) {
-  out_plot_timeseries(linelist_clean, indicator, groups, markers, return_data = TRUE) %>%
-    mutate(plot = file, indicator = indicator, .before = 1)
-}) %>%
-  write_csv(here("outputs", "figures", "timeseries_plot_data.csv"))
-
-message("Outputs written to outputs/tables and outputs/figures")
+message("Outputs written to outputs/paper/tables and outputs/paper/figures")
