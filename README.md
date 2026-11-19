@@ -9,31 +9,40 @@ Reproducible analysis for a descriptive time-series study of leprosy notificatio
 | `R/01_load_data.R` | Read raw files as text, type each column | `data-processed/*_typed.qs2` |
 | `R/02_data_summary.R` | Data-check tables to assess cleaning | `outputs/data_checks/*.docx` |
 | `R/03_clean_data.R` | Cleaning rules and derived columns | `data-processed/linelist_clean.qs2` |
-| `R/04_output_functions.R` | Library of `out_tab_*` and `out_plot_*` functions | (sourced by 05) |
-| `R/05_run_outputs.R` | Build all tables and figures | `outputs/` |
+| `R/04_output_functions.R` | The `out_tab_*` and `out_plot_*` functions for the manuscript's tables and figures, plus shared themes and helpers | (sourced by 05) |
+| `R/05_run_outputs.R` | Build the manuscript tables and figures, named by manuscript item | `outputs/paper/` |
+| `R/exploratory/` | Exploratory and superseded output functions and their runner (`run_exploratory.R`); not needed for the manuscript | `outputs/exploratory/` |
 
 ## Outputs
 
-Tables are in `outputs/tables/` and figures (with their data as CSV) in `outputs/figures/`:
+`05_run_outputs.R` writes tables to `outputs/paper/tables/` and figures (with a `.txt` of the title and caption, and for some the plotted data as CSV) to `outputs/paper/figures/`, reproducing the submitted manuscript (v6):
 
-- `public_health_activities`: public health activities
-- `case_mix_by_mode_2022_2025`, `case_mix_by_mode_2018_2025`: profile of notifications by mode of detection
-- `rates_per_10000`: case notification rate by area
-- `pyramid_south_tarawa`, `supp_pyramid_betio`: notifications pyramid by age group and sex (count and rate)
-- `age_group_count_and_rate`: notifications by age group, sexes combined (count and rate)
-- `rate_by_mode_stacked_betio_vs_rest`: stacked notification rate by mode of detection, rest of South Tarawa vs Betio
-- `rate_and_casemix_over_time`: time series of notification rate and case mix
+| Manuscript item | Output file | Function |
+|---|---|---|
+| Table 1 | not produced by the pipeline (text table, written directly in the manuscript) | |
+| Table 2 | `Table2_case_mix_by_mode_2018_2025.docx` | `out_tab_casemix()` |
+| Fig 1 | not produced here (map, made in a separate repo) | |
+| Fig 2 | `Fig2_age_group_count_and_rate.png` | `out_plot_age_rate()` |
+| Fig 3 | `Fig3_count_by_mode_betio_vs_rest.png` | `out_plot_rate_mode_stacked(use_counts = TRUE)` |
+| Fig 4 | `Fig4_rate_and_casemix_over_time.png` | `out_plot_casemix_time()` |
+| Supp Table 1 | `SuppTable1_age_group_denominators_by_year.docx` | `out_tab_denominators()` |
+| Supp Table 2 | `SuppTable2_population_denominators_by_area_year.docx` | `out_tab_population()` |
+| Supp Table 3 | `SuppTable3_case_mix_by_mode_betio_2023_2025.docx` | `out_tab_casemix(area = "Betio")` |
+| Supp Table 4 | `SuppTable4_case_mix_by_mode_rest_south_tarawa_2018_2025.docx` | `out_tab_casemix(area = "Rest of South Tarawa")` |
+| Supp Table 5 | `SuppTable5_rates_by_period.docx` | `out_tab_rates_period()` |
 
-An orientation map is not produced by the pipeline. The same folders also hold supplementary outputs (`supp_` prefix) and replications of a draft manuscript's own tables and figures, numbered as that document numbers them (`draft_` prefix).
+`R/exploratory/run_exploratory.R` (optional) writes every other table and figure built during the analysis to `outputs/exploratory/`.
 
 ## Structure
 
 ```
-R/                     pipeline scripts
+R/                     pipeline scripts (manuscript outputs)
+R/exploratory/         exploratory and superseded output functions and runner
 data-raw/              input data (not in git)
 data-processed/        .qs2 objects (not in git)
 outputs/
-  tables/, figures/    manuscript, supplementary and draft outputs
+  paper/               manuscript tables/ and figures/, named by manuscript item
+  exploratory/         exploratory tables/ and figures/
   data_checks/         data summary tables
   data_cleaning/       cleaning rules and data queries, per raw file
 context/               reference material (not in git)
@@ -47,7 +56,7 @@ renv/, renv.lock       package environment
    - notification linelist: an `.xlsx` named `... rec YYMMDD.xlsx` (date received; the latest is used)
    - `annual_population_estimates.csv`
    - `2020_betio_agegp_MF.csv` and `2020_st_agegp_MF.csv`
-   - `table1.csv`: the text of Table 1 (see below)
+   - `table1.csv`: the text of Table 1 (read by `01`; used only by the exploratory outputs, see below)
 3. Run the scripts in order:
 
 ```
@@ -55,11 +64,12 @@ Rscript R/01_load_data.R
 Rscript R/02_data_summary.R
 Rscript R/03_clean_data.R
 Rscript R/05_run_outputs.R
+Rscript R/exploratory/run_exploratory.R   # optional
 ```
 
 ### `data-raw/table1.csv`
 
-Table 1 (public health activities) is text, not data, so it is read from a CSV instead of being written in the code. `R/01_load_data.R` reads it as text and `out_tab_interventions()` in `R/04` builds the table from it.
+Table 1 (public health activities) is text, not data. The manuscript's Table 1 is written directly in the manuscript, not produced by the pipeline. The CSV is used only by the exploratory outputs: `R/01_load_data.R` reads it as text (so the file must be present) and `out_tab_interventions()` in `R/exploratory/` builds a formatted table from it.
 
 - UTF-8 CSV (Excel's "CSV UTF-8" is fine; a byte-order mark is handled).
 - One header row, then one row per activity, in the order they should appear.
