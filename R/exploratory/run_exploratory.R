@@ -3,6 +3,7 @@
 # Runs the exploratory and superseded outputs (everything not in the manuscript) on the cleaned linelist
 # Uses R/04_output_functions.R (shared helpers, pyramid) plus the functions in this folder
 # Writes tables (DOCX) and figures (PNG, description as TXT, data as CSV) to outputs/exploratory/tables/ and outputs/exploratory/figures/
+# census_pop and pop_age setup duplicated from 05_run_outputs.R; update both if changed
 
 # Author:           Jeremy Hill
 # Date commenced:   19 Sep 2026
