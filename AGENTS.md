@@ -23,7 +23,7 @@ Rscript R/exploratory/run_exploratory.R   # optional
 - `R/exploratory/`: exploratory and superseded output functions and their runner (`run_exploratory.R`). Not needed for the manuscript.
 - `data-raw/`: inputs (linelist `.xlsx` named `... rec YYMMDD.xlsx`, census and age-sex population `.csv`, `table1.csv` = the text of Table 1, used only by exploratory outputs, layout in the README). Not in git.
 - `data-processed/`: `.qs2` objects. Not in git.
-- `outputs/paper/tables`, `outputs/paper/figures`: the manuscript's tables and figures, named by manuscript item (`Table2_`, `Fig3_`, `SuppTable1_`...). Figures have a `.txt` of the title and caption (left out of the PNG unless `embed_text = TRUE`) and, for some, a data CSV. Table 1 is written in the manuscript and Fig 1 comes from a separate repo, so neither is produced here. `outputs/exploratory/`: everything from the exploratory runner.
+- `outputs/paper/tables`, `outputs/paper/figures`: the manuscript's tables and figures, named by manuscript item (`Table2_`, `Fig3_`, `SuppTable1_`...). Figures are PNG and EPS with a `.txt` of the caption (left out of the image unless `embed_text = TRUE`) and, for some, a data CSV. Figure captions are written in the plot functions (`R/04`); table captions, including the table number and footnotes, are written in the calls in `R/05`. Table text is plain (no bold or italics). Table 1 is written in the manuscript and Fig 1 comes from a separate repo, so neither is produced here. `outputs/exploratory/`: everything from the exploratory runner.
 - `outputs/data_cleaning/<raw filename> - notes.md`: every cleaning rule and data query, by raw file.
 - `context/`: reference material only. Not in git.
 
@@ -34,7 +34,7 @@ Rscript R/exploratory/run_exploratory.R   # optional
 - Cleaning rules live only in `03_clean_data.R`. Do not add or change one without asking, and record it in the notes file.
 - Output logic goes in functions: in `04` if the output is in the manuscript, otherwise in `R/exploratory/`. Give figures `return_data = TRUE` so the plotted numbers can be exported.
 - Match existing style. No numbered subheadings in code. Change only what the task needs; no unrequested functions, refactors or options.
-- Joins must be idempotent. Analyses are descriptive: no hypothesis tests beyond those already in the manuscript tables (Fisher's exact, house-to-house v passive); ask before adding more.
+- Joins must be idempotent. Analyses are descriptive: no hypothesis tests beyond those already in the manuscript tables (Fisher's exact with Newcombe-Wilson 95% CIs: house-to-house v passive in Table 2 and Supp Tables 4-5, sex and age-group comparisons in Supp Table 3); ask before adding more.
 
 ## Data
 

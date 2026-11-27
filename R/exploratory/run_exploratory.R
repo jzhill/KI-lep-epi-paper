@@ -115,7 +115,10 @@ save_as_docx(
 # Lookup table: notifications, person-years and rate per 10,000 by area and
 # period (before/after/all), split at the main intervention date (1 April 2023)
 save_as_docx(
-  out_tab_rates_period(linelist_clean, census_pop),
+  out_tab_rates_period(
+    linelist_clean, census_pop,
+    caption = "Notifications, person-years and case notification rate by area and period, South Tarawa, Kiribati"
+  ),
   path = here("outputs", "exploratory", "tables", "supp_rates_by_period_apr2023.docx"),
   pr_section = landscape
 )

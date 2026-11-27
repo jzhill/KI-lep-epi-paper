@@ -15,21 +15,33 @@ Reproducible analysis for a descriptive time-series study of leprosy notificatio
 
 ## Outputs
 
-`05_run_outputs.R` writes tables to `outputs/paper/tables/` and figures (with a `.txt` of the title and caption, and for some the plotted data as CSV) to `outputs/paper/figures/`, reproducing the submitted manuscript (v6):
+`05_run_outputs.R` writes tables to `outputs/paper/tables/` and figures (PNG and EPS, with a `.txt` of the caption and for some the plotted data as CSV) to `outputs/paper/figures/`, reproducing the submitted manuscript (v6):
 
 | Manuscript item | Output file | Function |
 |---|---|---|
 | Table 1 | not produced by the pipeline (text table, written directly in the manuscript) | |
 | Table 2 | `Table2_case_mix_by_mode_2018_2025.docx` | `out_tab_casemix()` |
 | Fig 1 | not produced here (map, made in a separate repo) | |
-| Fig 2 | `Fig2_age_group_count_and_rate.png` | `out_plot_age_rate()` |
-| Fig 3 | `Fig3_count_by_mode_betio_vs_rest.png` | `out_plot_rate_mode_stacked(use_counts = TRUE)` |
-| Fig 4 | `Fig4_rate_and_casemix_over_time.png` | `out_plot_casemix_time()` |
+| Fig 2 | `Fig2_age_group_count_and_rate` (`.png`, `.eps`) | `out_plot_age_rate()` |
+| Fig 3 | `Fig3_count_by_mode_betio_vs_rest` (`.png`, `.eps`) | `out_plot_rate_mode_stacked(use_counts = TRUE)` |
+| Fig 4 | `Fig4_rate_and_casemix_over_time` (`.png`, `.eps`) | `out_plot_casemix_time()` |
 | Supp Table 1 | `SuppTable1_age_group_denominators_by_year.docx` | `out_tab_denominators()` |
 | Supp Table 2 | `SuppTable2_population_denominators_by_area_year.docx` | `out_tab_population()` |
-| Supp Table 3 | `SuppTable3_case_mix_by_mode_betio_2023_2025.docx` | `out_tab_casemix(area = "Betio")` |
-| Supp Table 4 | `SuppTable4_case_mix_by_mode_rest_south_tarawa_2018_2025.docx` | `out_tab_casemix(area = "Rest of South Tarawa")` |
-| Supp Table 5 | `SuppTable5_rates_by_period.docx` | `out_tab_rates_period()` |
+| Supp Table 3 | `SuppTable3_mb_and_disability_by_sex_age_2018_2025.docx` | `out_tab_subgroup_comparison()` |
+| Supp Table 4 | `SuppTable4_case_mix_by_mode_betio_2023_2025.docx` | `out_tab_casemix(area = "Betio")` |
+| Supp Table 5 | `SuppTable5_case_mix_by_mode_rest_south_tarawa_2018_2025.docx` | `out_tab_casemix(area = "Rest of South Tarawa")` |
+| Supp Table 6 | `SuppTable6_rates_by_period.docx` | `out_tab_rates_period()` |
+
+### Figure format
+
+Figures follow the journal's artwork specifications (Lancet RHWP):
+
+- 107 mm wide (heights: Fig 2 75 mm, Fig 3 85 mm, Fig 4 170 mm), designed at print size so text is Arial at about 8 pt on the page.
+- Each figure is saved as a 300 dpi PNG and a vector EPS with the same name. EPS cannot hold transparency, so the figures use solid colours only.
+- The `.txt` beside each figure holds its full caption (including "Figure N."), exactly as in the manuscript. The caption is written in the plotting function in `R/04`, so a caption change is made there.
+- `save_figure()` in `R/04` does the saving (`units = "mm"`, `eps = TRUE`); each figure's size is set in its call in `R/05`. The map (Fig 1) is made in a separate repo.
+
+Table captions (full text, including "Table N." and footnotes) are written in the calls in `R/05`, in plain font with no bold or italics.
 
 `R/exploratory/run_exploratory.R` (optional) writes every other table and figure built during the analysis to `outputs/exploratory/`.
 

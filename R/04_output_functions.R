@@ -37,13 +37,15 @@ theme_lep_plot <- theme_minimal(base_size = 8, base_family = "Arial") +
     legend.text = element_text(size = 8)
   )
 
+# set_caption_plain(): table caption in Normal style (plain font; the default Table Caption style is not)
+set_caption_plain <- function(ft, caption) set_caption(ft, caption, word_stylename = "Normal")
+
 # theme_lep_table(): grey header, white body, uniform borders, small font
 theme_lep_table <- function(ft, ...) {
   ft %>%
     fontsize(size = 9, part = "all") %>%
     bg(bg = "grey85", part = "header") %>%
     bg(bg = "white", part = "body") %>%
-    bold(part = "header") %>%
     align(align = "center", part = "all") %>%
     align(j = 1, align = "left", part = "all") %>%
     valign(valign = "center", part = "all") %>%
@@ -89,7 +91,12 @@ save_figure <- function(filename, plot, width, height, embed_text = FALSE, units
 # chisq: chi-square, or Fisher's exact (dagger) if any expected count < 5
 # trend: linear-by-linear (Mantel-Haenszel) test, modes scored 1-3 in order
 
-casemix_fmt_p <- function(p) if (p < 0.001) "<0.001" else sprintf("%.3f", p)
+# p-values: 2 significant figures, at most 4 decimal places, "<0.0001" below that (Lancet style)
+casemix_fmt_p <- function(p) {
+  if (p < 0.0001) return("<0.0001")
+  p2 <- signif(p, 2)
+  formatC(p2, format = "f", digits = min(4, 1 - floor(log10(p2))))
+}
 
 casemix_p_chisq <- function(x, y) {
   counts <- table(x, y)
@@ -106,17 +113,17 @@ casemix_p_trend <- function(x, y) {
   casemix_fmt_p(pchisq((length(x) - 1) * r^2, df = 1, lower.tail = FALSE))
 }
 
-# casemix_h2h_v_passive()
-# House-to-house (group 1) vs passive (group 3) for a logical characteristic y
-# diff_ci: house-to-house minus passive, percentage points with a Newcombe-Wilson 95% CI
+# casemix_diff_two()
+# Two groups compared on a logical characteristic: y1 (group 1) and y2 (group 2)
+# diff_ci: group 1 minus group 2, percentage points with a Newcombe-Wilson 95% CI
 #   (suits small counts)
 # p_fisher: Fisher's exact p-value
 
-casemix_h2h_v_passive <- function(group, y) {
-  x1 <- sum(y[group == 1])
-  n1 <- sum(group == 1)
-  x2 <- sum(y[group == 3])
-  n2 <- sum(group == 3)
+casemix_diff_two <- function(y1, y2) {
+  x1 <- sum(y1)
+  n1 <- length(y1)
+  x2 <- sum(y2)
+  n2 <- length(y2)
   p1 <- x1 / n1
   p2 <- x2 / n2
   ci1 <- prop.test(x1, n1, correct = FALSE)$conf.int
@@ -124,13 +131,19 @@ casemix_h2h_v_passive <- function(group, y) {
   d <- p1 - p2
   lower <- d - sqrt((p1 - ci1[1])^2 + (ci2[2] - p2)^2)
   upper <- d + sqrt((ci1[2] - p1)^2 + (p2 - ci2[1])^2)
-  keep <- group %in% c(1, 3)
 
   tibble(
     diff_ci = sprintf("%+.1f (%+.1f to %+.1f)", 100 * d, 100 * lower, 100 * upper),
-    p_fisher = casemix_fmt_p(fisher.test(table(group[keep], y[keep]))$p.value)
+    p_fisher = casemix_fmt_p(fisher.test(table(
+      factor(rep(1:2, c(n1, n2))), factor(c(y1, y2), levels = c(FALSE, TRUE))
+    ))$p.value)
   )
 }
+
+# casemix_h2h_v_passive()
+# House-to-house (group 1) minus passive (group 3) for a logical characteristic y
+
+casemix_h2h_v_passive <- function(group, y) casemix_diff_two(y[group == 1], y[group == 3])
 
 # out_tab_casemix()
 # Table of cases by mode of detection in rows
@@ -147,14 +160,17 @@ casemix_h2h_v_passive <- function(group, y) {
 #   figure_rows = TRUE: All notifications first; then the difference between
 #     house-to-house and passive (percentage points, 95% CI) and its Fisher's
 #     exact p-value; one comparison per row. Age not tested (no p-value shown for it)
-# figure_rows = TRUE (needs transpose): rows are cases, male, age, MB, child (<15)
-#   and any disability (grade 1-2, as in Fig 4), then grade 1
-#   and grade 2; all % of the column (age excepted)
+# figure_rows = TRUE (needs transpose and caption): rows are cases, age, male,
+#   multibacillary, child (<15) and any disability, then grade 1 and grade 2;
+#   all % of the column (age excepted). No footer: caption (full text, including
+#   the table number and footnotes, e.g. for the ^ on the age row) is supplied by the caller
 
 out_tab_casemix <- function(linelist, start_year = 2018, end_year = 2025,
-                            transpose = FALSE, p_values = FALSE, figure_rows = FALSE, area = NULL) {
+                            transpose = FALSE, p_values = FALSE, figure_rows = FALSE, area = NULL,
+                            caption = NULL) {
   if (p_values && !transpose) stop("p_values = TRUE needs transpose = TRUE")
   if (figure_rows && !transpose) stop("figure_rows = TRUE needs transpose = TRUE")
+  if (figure_rows && is.null(caption)) stop("figure_rows = TRUE needs caption")
 
   row_levels <- c("House-to-house", "All other active", "All passive", "All notifications")
 
@@ -239,8 +255,7 @@ out_tab_casemix <- function(linelist, start_year = 2018, end_year = 2025,
         colwidths = c(1, 1, 1, 1, 3, 3, 2),
         top = TRUE
       ) %>%
-      merge_v(part = "header") %>%
-      bold(i = ~ row == "All notifications")
+      merge_v(part = "header")
   } else {
     char_levels <- c(
       n = "Cases", male = "Male", age_median_iqr = "Age, median (IQR)",
@@ -250,9 +265,9 @@ out_tab_casemix <- function(linelist, start_year = 2018, end_year = 2025,
     )
     if (figure_rows) {
       char_levels <- c(
-        n = "Cases", male = "Male", age_median_iqr = "Age, median (IQR)", mb = "MB",
+        n = "Cases, n", age_median_iqr = paste0("Age, median (IQR)", if (n_age_missing > 0) " ^" else ""), male = "Male", mb = "Multibacillary",
         child_all = "Child (<15 years)",
-        any_dis = "Any disability (grade 1-2)", dis1 = "Grade 1", dis2 = "Grade 2"
+        any_dis = "Any disability", dis1 = "Grade 1", dis2 = "Grade 2"
       )
     }
 
@@ -267,7 +282,8 @@ out_tab_casemix <- function(linelist, start_year = 2018, end_year = 2025,
     if (figure_rows) {
       tab_t <- tab_t %>%
         relocate(`All notifications`, .after = characteristic) %>%
-        rename(`Other active` = `All other active`, Passive = `All passive`)
+        rename(All = `All notifications`, `Other active` = `All other active`, Passive = `All passive`) %>%
+        rename_with(~ str_replace(.x, "\\*$", " *"))
     }
 
     if (p_values) {
@@ -313,7 +329,7 @@ out_tab_casemix <- function(linelist, start_year = 2018, end_year = 2025,
           casemix_h2h_v_passive(test_df$group, test_df$pat_disability == 2)
         ) %>%
           mutate(characteristic = c(
-            "Male", "MB", "Child (<15 years)", "Any disability (grade 1-2)", "Grade 1", "Grade 2"
+            "Male", "Multibacillary", "Child (<15 years)", "Any disability", "Grade 1", "Grade 2"
           ), .before = 1)
       }
 
@@ -346,11 +362,9 @@ out_tab_casemix <- function(linelist, start_year = 2018, end_year = 2025,
         characteristic = "Characteristic",
         p_chisq = "p, chi-square / Fisher",
         p_trend = "p, trend",
-        diff_ci = "H2H-passive (95% CI)",
-        p_fisher = "p"
+        diff_ci = "House-to-house minus passive (95% CI) †",
+        p_fisher = "p value †"
       )
-
-    if ("All notifications" %in% names(tab_t)) ft <- bold(ft, j = "All notifications")
 
     if (figure_rows) ft <- padding(ft, i = 7:8, j = 1, padding.left = 12)
 
@@ -359,6 +373,10 @@ out_tab_casemix <- function(linelist, start_year = 2018, end_year = 2025,
         for (col in c("p_chisq", "p_trend")) ft <- merge_at(ft, i = rows, j = col)
       }
     }
+  }
+
+  if (figure_rows) {
+    return(ft %>% set_caption_plain(caption) %>% theme_lep_table())
   }
 
   ft %>%
@@ -377,10 +395,107 @@ out_tab_casemix <- function(linelist, start_year = 2018, end_year = 2025,
       age_note,
       p_note
     )) %>%
-    set_caption(paste0(
+    set_caption_plain(paste0(
       "Case mix of leprosy cases by mode of detection, ", if (is.null(area)) "South Tarawa" else area, ", Kiribati, ",
       start_year, "-", end_year
     )) %>%
+    theme_lep_table()
+}
+
+# out_tab_subgroup_comparison()
+# Multibacillary leprosy and any disability (grade 1-2) by subgroup: all cases, sex, age group
+#   (adult / child) and sex within adults and within children
+# Period defined in parameters (default the whole study period)
+# Each pair of rows is a comparison: first row is the reference, second row shows the
+#   difference (second minus first, percentage points, Newcombe-Wilson 95% CI) and
+#   Fisher's exact p-value, for each outcome
+# Cases with missing age are in adults (age_group)
+# caption: full text, including the table number and footnotes, supplied by the caller
+
+out_tab_subgroup_comparison <- function(linelist, start_year = 2018, end_year = 2025, caption) {
+  ll <- linelist %>%
+    filter(year >= start_year, year <= end_year) %>%
+    mutate(
+      mb = leprosy_type == "MB",
+      any_dis = pat_disability >= 1,
+      child = age_group == "Child"
+    )
+
+  fmt_n <- function(y, i) sprintf("%d (%.1f%%)", sum(y[i]), 100 * mean(y[i]))
+
+  # Subgroup rows: heading row, then reference row and comparison row
+  blocks <- list(
+    list(
+      title = "Sex", labels = c("Male", "Female"),
+      idx = list(ll$male, !ll$male)
+    ),
+    list(
+      title = "Age group", labels = c("Adult (≥15 years)", "Child (<15 years)"),
+      idx = list(!ll$child, ll$child)
+    ),
+    list(
+      title = "Adults, by sex", labels = c("Male", "Female"),
+      idx = list(!ll$child & ll$male, !ll$child & !ll$male)
+    ),
+    list(
+      title = "Children, by sex", labels = c("Male", "Female"),
+      idx = list(ll$child & ll$male, ll$child & !ll$male)
+    )
+  )
+
+  # Cells for one subgroup row; the comparison (second) row also gets difference and p
+  sub_row <- function(label, idx, ref_idx = NULL) {
+    out <- tibble(
+      subgroup = label,
+      cases = as.character(sum(idx)),
+      mb = fmt_n(ll$mb, idx),
+      mb_diff = "", mb_p = "",
+      dis = fmt_n(ll$any_dis, idx),
+      dis_diff = "", dis_p = ""
+    )
+    if (is.null(ref_idx)) {
+      out <- out %>% mutate(mb_diff = "Reference", dis_diff = "Reference")
+    } else {
+      d_mb <- casemix_diff_two(ll$mb[idx], ll$mb[ref_idx])
+      d_dis <- casemix_diff_two(ll$any_dis[idx], ll$any_dis[ref_idx])
+      out <- out %>% mutate(
+        mb_diff = d_mb$diff_ci, mb_p = d_mb$p_fisher,
+        dis_diff = d_dis$diff_ci, dis_p = d_dis$p_fisher
+      )
+    }
+    out
+  }
+
+  all_row <- sub_row("All cases", rep(TRUE, nrow(ll))) %>% mutate(mb_diff = "", dis_diff = "")
+
+  tab <- bind_rows(
+    all_row %>% mutate(is_sub = FALSE),
+    map(blocks, function(b) {
+      bind_rows(
+        tibble(subgroup = b$title, is_sub = FALSE),
+        sub_row(b$labels[1], b$idx[[1]]) %>% mutate(is_sub = TRUE),
+        sub_row(b$labels[2], b$idx[[2]], ref_idx = b$idx[[1]]) %>% mutate(is_sub = TRUE)
+      )
+    }) %>% list_rbind()
+  ) %>%
+    mutate(is_sub = replace_na(is_sub, FALSE), across(-is_sub, ~ replace_na(.x, "")))
+
+  tab %>%
+    select(-is_sub) %>%
+    flextable() %>%
+    set_header_labels(
+      subgroup = "Subgroup", cases = "Cases, n",
+      mb = "n (%)", mb_diff = "Difference (95% CI) †", mb_p = "p value †",
+      dis = "n (%)", dis_diff = "Difference (95% CI) †", dis_p = "p value †"
+    ) %>%
+    add_header_row(
+      values = c("Subgroup", "Cases, n", "Multibacillary", "Any disability"),
+      colwidths = c(1, 1, 3, 3),
+      top = TRUE
+    ) %>%
+    merge_v(part = "header") %>%
+    padding(i = which(tab$is_sub), j = 1, padding.left = 12) %>%
+    set_caption_plain(caption) %>%
     theme_lep_table()
 }
 
@@ -394,8 +509,9 @@ out_tab_casemix <- function(linelist, start_year = 2018, end_year = 2025,
 # Person-years: person_years_for_period(), prorated by day for the part-year at the cut
 #   census_pop: tibble(area, year, population)
 #   return_data = TRUE returns the numbers
+#   caption: full text, including the table number and footnotes (needed unless return_data = TRUE)
 
-out_tab_rates_period <- function(linelist, census_pop, start_date = as.Date("2018-01-01"), return_data = FALSE) {
+out_tab_rates_period <- function(linelist, census_pop, start_date = as.Date("2018-01-01"), return_data = FALSE, caption = NULL) {
   area_levels <- c("South Tarawa (all)", "Betio", "Rest of South Tarawa")
   cutoff_date <- as.Date("2023-04-01")
   period_bounds <- tribble(
@@ -426,6 +542,7 @@ out_tab_rates_period <- function(linelist, census_pop, start_date = as.Date("201
   if (return_data) {
     return(rates)
   }
+  if (is.null(caption)) stop("caption is needed")
 
   rates %>%
     mutate(
@@ -436,7 +553,7 @@ out_tab_rates_period <- function(linelist, census_pop, start_date = as.Date("201
     transmute(
       area, period,
       cases = as.character(cases),
-      person_years = format(round(person_years), big.mark = ","),
+      person_years = format(round(person_years), big.mark = ",", trim = TRUE),
       rate = sprintf("%.1f", rate)
     ) %>%
     flextable() %>%
@@ -448,13 +565,7 @@ out_tab_rates_period <- function(linelist, census_pop, start_date = as.Date("201
       rate = "Rate per 10,000 person-years"
     ) %>%
     merge_v(j = "area") %>%
-    add_footer_lines(paste0(
-      "Before = ", format(start_date, "%d %B %Y"), "-31 March 2023; after = 1 April 2023-31 December 2025 ",
-      "(COMBINE house-to-house screening started in Betio on 1 April 2023); all = ", format(start_date, "%d %B %Y"),
-      "-31 December 2025. Person-years are the area's population summed over the period (2020 census; other ",
-      "years intercensal estimates), prorated by day for the part-year at the cut."
-    )) %>%
-    set_caption("Notifications, person-years and case notification rate by area and period, South Tarawa, Kiribati") %>%
+    set_caption_plain(caption) %>%
     theme_lep_table()
 }
 
@@ -464,8 +575,9 @@ out_tab_rates_period <- function(linelist, census_pop, start_date = as.Date("201
 # Each age group's share of the 2020 population is held constant and applied to each year's total population
 #   pop_age: tibble(area, age_group [ordered factor], sex, population), 2020
 #   census_pop: tibble(area, year, population), annual total population
+#   caption: full text, including the table number and footnotes
 
-out_tab_denominators <- function(pop_age, census_pop) {
+out_tab_denominators <- function(pop_age, census_pop, caption) {
   share <- pop_age %>%
     filter(area == "South Tarawa") %>%
     group_by(age_group) %>%
@@ -486,8 +598,8 @@ out_tab_denominators <- function(pop_age, census_pop) {
     mutate(person_years = sum(population)) %>%
     ungroup() %>%
     mutate(
-      population = format(round(population), big.mark = ","),
-      person_years = format(round(person_years), big.mark = ",")
+      population = format(round(population), big.mark = ",", trim = TRUE),
+      person_years = format(round(person_years), big.mark = ",", trim = TRUE)
     ) %>%
     arrange(age_group) %>%
     pivot_wider(names_from = year, values_from = population) %>%
@@ -497,14 +609,7 @@ out_tab_denominators <- function(pop_age, census_pop) {
   tab %>%
     flextable() %>%
     set_header_labels(age_group = "Age group (years)", person_years = "Person-years 2018-2025") %>%
-    bold(i = ~ age_group == "All ages") %>%
-    add_footer_lines(paste0(
-      "Estimated population = the age group's share of the 2020 census population (age structure held constant) x the ",
-      "annual total population estimate (2020 census; other years intercensal estimates). Sexes combined. ",
-      "Person-years = the sum of the annual estimates, 2018-2025 (the rate denominator in Figures 2a and 2b). ",
-      "Age groups may not sum exactly to the total because of rounding."
-    )) %>%
-    set_caption("Estimated population by age group and year (rate denominators), South Tarawa, Kiribati, 2018-2025") %>%
+    set_caption_plain(caption) %>%
     theme_lep_table()
 }
 
@@ -513,8 +618,9 @@ out_tab_denominators <- function(pop_age, census_pop) {
 # Denominators for area-level rates
 # Person-years = sum of the annual estimates
 #   census_pop: tibble(area, year, population), annual population per area
+#   caption: full text, including the table number and footnotes
 
-out_tab_population <- function(census_pop) {
+out_tab_population <- function(census_pop, caption) {
   area_levels <- c("South Tarawa (all)", "Betio", "Rest of South Tarawa")
 
   census_pop %>%
@@ -524,8 +630,8 @@ out_tab_population <- function(census_pop) {
     ungroup() %>%
     mutate(
       area = factor(area, levels = area_levels),
-      population = format(population, big.mark = ","),
-      person_years = format(person_years, big.mark = ",")
+      population = format(population, big.mark = ",", trim = TRUE),
+      person_years = format(person_years, big.mark = ",", trim = TRUE)
     ) %>%
     arrange(area) %>%
     pivot_wider(names_from = year, values_from = population) %>%
@@ -533,11 +639,7 @@ out_tab_population <- function(census_pop) {
     mutate(area = as.character(area)) %>%
     flextable() %>%
     set_header_labels(area = "Area", person_years = "Person-years 2018-2025") %>%
-    add_footer_lines(paste0(
-      "Annual population estimates: 2020 census; other years intercensal estimates. ",
-      "Person-years = the sum of the annual estimates, 2018-2025 (the rate denominator)."
-    )) %>%
-    set_caption("Annual population estimates (rate denominators), South Tarawa, Betio and the rest of South Tarawa, 2018-2025") %>%
+    set_caption_plain(caption) %>%
     theme_lep_table()
 }
 

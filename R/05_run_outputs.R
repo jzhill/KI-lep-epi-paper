@@ -75,40 +75,112 @@ landscape <- prop_section(page_size = page_size(orient = "landscape"))
 
 # Table 2: case mix by mode of detection, South Tarawa 2018-2025
 save_as_docx(
-  out_tab_casemix(linelist_clean, 2018, 2025, transpose = TRUE, p_values = TRUE, figure_rows = TRUE),
+  out_tab_casemix(
+    linelist_clean, 2018, 2025, transpose = TRUE, p_values = TRUE, figure_rows = TRUE,
+    caption = paste0(
+      "Table 2. Leprosy notifications and selected patient characteristics in South Tarawa from 2018-2025, ",
+      "comparing different modes of case detection. Data are n (%) unless stated; percentages are of the total number of cases for the column. ",
+      "House-to-house: COMBINE screening, including the 2022 pilot; other active: household contact, population, ",
+      "school and skin camp screening; passive: self-presentation and clinical referral. ",
+      "*House-to-house mode of case detection was only used in 2022-2025. ",
+      "†Newcombe-Wilson 95% CI; p: Fisher's exact test, house-to-house v passive only. ",
+      "^Age summary excludes four cases with missing age."
+    )
+  ),
   path = file.path(tab_dir, "Table2_case_mix_by_mode_2018_2025.docx")
 )
 
 # Supp Table 1: population by age group and year
 save_as_docx(
-  out_tab_denominators(pop_age, census_pop),
+  out_tab_denominators(
+    pop_age, census_pop,
+    caption = paste0(
+      "Table S1. Estimated population of South Tarawa by age group and year (rate denominators), 2018-2025. ",
+      "Estimated population: the age group's share of the 2020 census population (age structure held constant) ",
+      "multiplied by the annual total population estimate (2020 census; other years intercensal estimates), sexes combined. ",
+      "Person-years: the sum of the annual estimates, 2018-2025 (the rate denominator in Figure 2). ",
+      "Age groups may not sum exactly to the total because of rounding."
+    )
+  ),
   path = file.path(tab_dir, "SuppTable1_age_group_denominators_by_year.docx"),
   pr_section = landscape
 )
 
 # Supp Table 2: population by area and year (rate denominators)
 save_as_docx(
-  out_tab_population(census_pop),
+  out_tab_population(
+    census_pop,
+    caption = paste0(
+      "Table S2. Annual population estimates (rate denominators), South Tarawa, Betio and the rest of South Tarawa, 2018-2025. ",
+      "2020 census; other years intercensal estimates. ",
+      "Person-years: the sum of the annual estimates, 2018-2025 (the rate denominator)."
+    )
+  ),
   path = file.path(tab_dir, "SuppTable2_population_denominators_by_area_year.docx"),
   pr_section = landscape
 )
 
-# Supp Table 3: case mix by mode, Betio 2023-25 (house-to-house period)
+# Supp Table 3: multibacillary leprosy and any disability by sex and age group, 2018-25
 save_as_docx(
-  out_tab_casemix(linelist_clean, 2023, 2025, transpose = TRUE, p_values = TRUE, figure_rows = TRUE, area = "Betio"),
-  path = file.path(tab_dir, "SuppTable3_case_mix_by_mode_betio_2023_2025.docx")
+  out_tab_subgroup_comparison(
+    linelist_clean, 2018, 2025,
+    caption = paste0(
+      "Table S3. Multibacillary leprosy and any disability at diagnosis by sex and age group. ",
+      "Percentages are of the total number of cases in the subgroup. ",
+      "†Newcombe-Wilson 95% CI; p: Fisher's exact test. ",
+      "Comparisons overlap and are not independent; no adjustment for multiple comparisons."
+    )
+  ),
+  path = file.path(tab_dir, "SuppTable3_mb_and_disability_by_sex_age_2018_2025.docx"),
+  pr_section = landscape
 )
 
-# Supp Table 4: case mix by mode, rest of South Tarawa 2018-25 (only 8 house-to-house cases, the 2022 pilot)
+# Supp Table 4: case mix by mode, Betio 2023-25 (house-to-house period)
 save_as_docx(
-  out_tab_casemix(linelist_clean, 2018, 2025, transpose = TRUE, p_values = TRUE, figure_rows = TRUE, area = "Rest of South Tarawa"),
-  path = file.path(tab_dir, "SuppTable4_case_mix_by_mode_rest_south_tarawa_2018_2025.docx")
+  out_tab_casemix(
+    linelist_clean, 2023, 2025, transpose = TRUE, p_values = TRUE, figure_rows = TRUE, area = "Betio",
+    caption = paste0(
+      "Table S4. Leprosy notifications and selected patient characteristics in Betio from 2023-2025, ",
+      "comparing different modes of case detection. Data are n (%) unless stated; percentages are of the total number of cases for the column. ",
+      "House-to-house: COMBINE screening; other active: household contact, population, ",
+      "school and skin camp screening; passive: self-presentation and clinical referral. ",
+      "†Newcombe-Wilson 95% CI; p: Fisher's exact test, house-to-house v passive only. ",
+      "^Age summary excludes one case with missing age."
+    )
+  ),
+  path = file.path(tab_dir, "SuppTable4_case_mix_by_mode_betio_2023_2025.docx")
 )
 
-# Supp Table 5: notifications, person-years and rate by area and period, split at 1 April 2023, study period from 1 January 2019
+# Supp Table 5: case mix by mode, rest of South Tarawa 2018-25 (only 8 house-to-house cases, the 2022 pilot)
 save_as_docx(
-  out_tab_rates_period(linelist_clean, census_pop, start_date = as.Date("2019-01-01")),
-  path = file.path(tab_dir, "SuppTable5_rates_by_period.docx"),
+  out_tab_casemix(
+    linelist_clean, 2018, 2025, transpose = TRUE, p_values = TRUE, figure_rows = TRUE, area = "Rest of South Tarawa",
+    caption = paste0(
+      "Table S5. Leprosy notifications and selected patient characteristics in the rest of South Tarawa from 2018-2025, ",
+      "comparing different modes of case detection. Data are n (%) unless stated; percentages are of the total number of cases for the column. ",
+      "House-to-house: COMBINE screening, including the 2022 pilot; other active: household contact, population, ",
+      "school and skin camp screening; passive: self-presentation and clinical referral. ",
+      "*House-to-house mode of case detection was only used in 2022-2025. ",
+      "†Newcombe-Wilson 95% CI; p: Fisher's exact test, house-to-house v passive only. ",
+      "^Age summary excludes one case with missing age."
+    )
+  ),
+  path = file.path(tab_dir, "SuppTable5_case_mix_by_mode_rest_south_tarawa_2018_2025.docx")
+)
+
+# Supp Table 6: notifications, person-years and rate by area and period, split at 1 April 2023, study period from 1 January 2019
+save_as_docx(
+  out_tab_rates_period(
+    linelist_clean, census_pop, start_date = as.Date("2019-01-01"),
+    caption = paste0(
+      "Table S6. Notifications, person-years and case notification rate by area and period, South Tarawa, Kiribati. ",
+      "Before: 1 January 2019 to 31 March 2023; after: 1 April 2023 to 31 December 2025 ",
+      "(COMBINE house-to-house screening started in Betio on 1 April 2023); all: 1 January 2019 to 31 December 2025. ",
+      "Person-years: the area's population summed over the period (2020 census; other years intercensal estimates), ",
+      "prorated by day."
+    )
+  ),
+  path = file.path(tab_dir, "SuppTable6_rates_by_period.docx"),
   pr_section = landscape
 )
 
